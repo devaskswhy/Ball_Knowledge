@@ -129,9 +129,16 @@ TEAM_ID_MAP = {
 
 
 # ---------------- API MODELS ----------------
+class Injury(BaseModel):
+    name: str = "Unknown"
+    position: str = "MID"  # GK, DEF, MID, ATT
+    impact: int = 5        # 1-10
+
 class MatchQuery(BaseModel):
     home: str
     away: str
+    home_injuries: list[Injury] = []
+    away_injuries: list[Injury] = []
 
 # ---------------- ROUTES ----------------
 @app.post("/predict")
@@ -139,7 +146,11 @@ def predict(q: MatchQuery):
     if q.home not in power_lookup or q.away not in power_lookup:
         raise HTTPException(status_code=400, detail="Unknown team name")
 
-    res = predictor.predict_match(q.home, q.away)
+    # dict conversion for the predictor
+    h_inj = [i.dict() for i in q.home_injuries]
+    a_inj = [i.dict() for i in q.away_injuries]
+
+    res = predictor.predict_match(q.home, q.away, h_inj, a_inj)
     return {
         "home": res["home"],
         "away": res["away"],
@@ -148,6 +159,8 @@ def predict(q: MatchQuery):
         "away_win": round(res["away_win"] * 100, 1),
         "elo_diff": round(res["elo_diff"], 1),
         "power_diff": round(res["power_diff"], 1),
+        "home_penalty": round(res.get("home_penalty", 0), 1),
+        "away_penalty": round(res.get("away_penalty", 0), 1),
     }
 
 @app.get("/preview")

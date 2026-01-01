@@ -5,7 +5,7 @@ class MatchPredictor:
         self.elo_engine = elo_engine
         self.power_lookup = power_lookup
 
-    def predict_match(self, home, away):
+    def predict_match(self, home, away, home_injuries=None, away_injuries=None):
         elo_home = self.elo_engine.get_elo(home)
         elo_away = self.elo_engine.get_elo(away)
         elo_diff = elo_home - elo_away
@@ -14,6 +14,26 @@ class MatchPredictor:
 
         ps_home = self.power_lookup.get(home, 50)
         ps_away = self.power_lookup.get(away, 50)
+
+        # Apply Injury Penalties
+        # Logic: Impact (1-10) -> Max 5 points per player
+        # We can refine this later to distinguish ATT/DEF impact if the model gets more complex
+        def calculate_penalty(injuries):
+            if not injuries:
+                return 0
+            penalty = 0
+            for inj in injuries:
+                impact = inj.get("impact", 0) # 1-10
+                # Weighting: 10 impact = 5 power score drop
+                penalty += (impact * 0.5)
+            return penalty
+
+        home_penalty = calculate_penalty(home_injuries)
+        away_penalty = calculate_penalty(away_injuries)
+
+        ps_home -= home_penalty
+        ps_away -= away_penalty
+
         ps_diff = ps_home - ps_away
 
         prob_home_power = 1 / (1 + np.exp(-ps_diff / 12))
@@ -31,5 +51,7 @@ class MatchPredictor:
             "draw": base_draw / total,
             "away_win": final_away / total,
             "elo_diff": elo_diff,
-            "power_diff": ps_diff
+            "power_diff": ps_diff,
+            "home_penalty": home_penalty,
+            "away_penalty": away_penalty
         }
