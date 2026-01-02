@@ -5,7 +5,7 @@ class MatchPredictor:
         self.elo_engine = elo_engine
         self.power_lookup = power_lookup
 
-    def predict_match(self, home, away, home_injuries=None, away_injuries=None):
+    def predict_match(self, home, away, home_injuries=None, away_injuries=None, home_rest=7, away_rest=7):
         elo_home = self.elo_engine.get_elo(home)
         elo_away = self.elo_engine.get_elo(away)
         elo_diff = elo_home - elo_away
@@ -16,8 +16,6 @@ class MatchPredictor:
         ps_away = self.power_lookup.get(away, 50)
 
         # Apply Injury Penalties
-        # Logic: Impact (1-10) -> Max 5 points per player
-        # We can refine this later to distinguish ATT/DEF impact if the model gets more complex
         def calculate_penalty(injuries):
             if not injuries:
                 return 0
@@ -33,6 +31,25 @@ class MatchPredictor:
 
         ps_home -= home_penalty
         ps_away -= away_penalty
+
+        # Apply Fatigue / Context
+        # Rest Days < 3: High Fatigue (-4)
+        # Rest Days = 3: Med Fatigue (-2)
+        # Rest Days > 7: Freshness (+2)
+        def calculate_fatigue(rest_days):
+            if rest_days < 3:
+                return 4.0
+            elif rest_days == 3:
+                return 2.0
+            elif rest_days > 7:
+                return -2.0 # Negative penalty = Bonus
+            return 0.0
+
+        home_fatigue = calculate_fatigue(home_rest)
+        away_fatigue = calculate_fatigue(away_rest)
+
+        ps_home -= home_fatigue
+        ps_away -= away_fatigue
 
         ps_diff = ps_home - ps_away
 
@@ -53,5 +70,7 @@ class MatchPredictor:
             "elo_diff": elo_diff,
             "power_diff": ps_diff,
             "home_penalty": home_penalty,
-            "away_penalty": away_penalty
+            "away_penalty": away_penalty,
+            "home_fatigue": home_fatigue,
+            "away_fatigue": away_fatigue
         }

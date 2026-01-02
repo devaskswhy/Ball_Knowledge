@@ -1,22 +1,78 @@
+import os
 import requests
+from dotenv import load_dotenv
 
-API_KEY = "YOUR_API_KEY"
+load_dotenv()
+API_KEY = os.getenv("API_FOOTBALL_KEY")
+
+HEADERS = {
+    "x-apisports-key": API_KEY,
+    "x-rapidapi-host": "v3.football.api-sports.io"
+}
+BASE_URL = "https://v3.football.api-sports.io"
 
 def get_injuries(team_id):
-    url = "https://v3.football.api-sports.io/injuries"
-    headers = {"x-apisports-key": API_KEY}
-    params = {"team": team_id, "season": 2024}
+    if not API_KEY:
+        print("Warning: No API Key found.")
+        return []
+        
+    url = f"{BASE_URL}/injuries"
+    params = {"team": team_id, "season": 2023} # Using 2023 for the dataset context
 
-    r = requests.get(url, headers=headers, params=params)
-    data = r.json()["response"]
+    try:
+        r = requests.get(url, headers=HEADERS, params=params)
+        data = r.json().get("response", [])
+    except Exception as e:
+        print(f"Error fetching injuries for {team_id}: {e}")
+        return []
 
     injuries = []
     for i in data:
+        fi = i["player"]
+        pos_map = {
+            "Goalkeeper": "GK",
+            "Defender": "DEF",
+            "Midfielder": "MID",
+            "Attacker": "ATT"
+        }
+        
+        position = pos_map.get(fi["type"], "MID")
+        
+        # Deduplicate by checking if name already exists
+        if any(inj["name"] == fi["name"] for inj in injuries):
+            continue
+
         injuries.append({
-            "player": i["player"]["name"],
-            "position": i["player"]["type"]  # GK/DEF/MID/ATT
+            "name": fi["name"],
+            "position": position,
+            "impact": 5 # Default impact, user adjusts manually
         })
-    return injuries
+    
+    return injuries[:8] # Limit to 8 to avoid clutter
+
+def get_last_match_date(team_id):
+    if not API_KEY:
+        return None
+
+    url = f"{BASE_URL}/fixtures"
+    # Fetch last 1 match that is finished
+    params = {
+        "team": team_id, 
+        "last": 1, 
+        "status": "FT",
+        "season": 2023 # Align with dataset season
+    }
+
+    try:
+        r = requests.get(url, headers=HEADERS, params=params)
+        data = r.json().get("response", [])
+        if data:
+            # Format: 2024-04-20T14:00:00+00:00
+            return data[0]["fixture"]["date"]
+    except Exception as e:
+        print(f"Error fetching fixtures for {team_id}: {e}")
+        return None
+
 def role_counts(injuries):
     roles = {"GK": 0, "DEF": 0, "MID": 0, "ATT": 0}
     for p in injuries:

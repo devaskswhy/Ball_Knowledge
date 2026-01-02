@@ -139,6 +139,8 @@ class MatchQuery(BaseModel):
     away: str
     home_injuries: list[Injury] = []
     away_injuries: list[Injury] = []
+    home_rest_days: int = 7
+    away_rest_days: int = 7
 
 # ---------------- ROUTES ----------------
 @app.post("/predict")
@@ -150,7 +152,9 @@ def predict(q: MatchQuery):
     h_inj = [i.dict() for i in q.home_injuries]
     a_inj = [i.dict() for i in q.away_injuries]
 
-    res = predictor.predict_match(q.home, q.away, h_inj, a_inj)
+    res = predictor.predict_match(
+        q.home, q.away, h_inj, a_inj, q.home_rest_days, q.away_rest_days
+    )
     return {
         "home": res["home"],
         "away": res["away"],
@@ -161,6 +165,8 @@ def predict(q: MatchQuery):
         "power_diff": round(res["power_diff"], 1),
         "home_penalty": round(res.get("home_penalty", 0), 1),
         "away_penalty": round(res.get("away_penalty", 0), 1),
+        "home_fatigue": round(res.get("home_fatigue", 0), 1),
+        "away_fatigue": round(res.get("away_fatigue", 0), 1),
     }
 
 @app.get("/preview")
@@ -187,5 +193,55 @@ def auto_injuries(team: str):
         "team": team,
         "injuries": injuries,
         "role_counts": roles
+    }
+
+# ---------------- LIVE DATA ----------------
+from services.external_data import get_last_match_date
+from datetime import datetime
+import pytz
+
+@app.get("/live_data")
+def live_data(home: str, away: str):
+    if home not in TEAM_ID_MAP or away not in TEAM_ID_MAP:
+        raise HTTPException(status_code=400, detail="One or more teams not mapped")
+
+    hid = TEAM_ID_MAP[home]
+    aid = TEAM_ID_MAP[away]
+
+    # 1. Injuries
+    h_inj = get_injuries(hid)
+    a_inj = get_injuries(aid)
+
+    # 2. Rest Days Calculation
+    def calc_rest(tid):
+        last_date_str = get_last_match_date(tid)
+        if not last_date_str:
+            return 7 # Default
+        
+        # Parse ISO format: 2024-04-20T15:00:00+00:00
+        # We need to be careful with timezones.
+        try:
+            last_date = datetime.fromisoformat(last_date_str)
+            # For this project, we'll assume "Now" is the time of the request
+            # But since the data is 2023-24 season, "Now" might be far ahead.
+            # If the gap is huge (> 30 days), assume it's a new season or break -> 7 days.
+            now = datetime.now(pytz.utc)
+            delta = (now - last_date).days
+            
+            if delta > 30 or delta < 0:
+                return 7
+            return max(1, delta)
+        except Exception as e:
+            print(f"Date parse error: {e}")
+            return 7
+
+    h_rest = calc_rest(hid)
+    a_rest = calc_rest(aid)
+
+    return {
+        "home_injuries": h_inj,
+        "away_injuries": a_inj,
+        "home_rest": h_rest,
+        "away_rest": a_rest
     }
 
