@@ -113,18 +113,31 @@ predictor = MatchPredictor(elo, power_lookup)
 
 print("Startup finished. Teams:", list(power_lookup.keys()))
 # ---------------- TEAM ID MAP (API-Football) ----------------
+# ---------------- TEAM ID MAP (API-Football) ----------------
+# IDs based on standard API-Football mapping for Premier League
 TEAM_ID_MAP = {
-    "Manchester City": 50,
-    "Man City": 50,
-
     "Arsenal": 42,
-
-    "Liverpool": 40,
-
-    "Tottenham": 47,
-    "Totenham": 47,
-
+    "Aston Villa": 66,
+    "Bournemouth": 35,
+    "Brentford": 55,
+    "Brighton": 51,
+    "Burnley": 44,
     "Chelsea": 49,
+    "Crystal Palace": 52,
+    "Everton": 45,
+    "Fulham": 36,
+    "Liverpool": 40,
+    "Luton": 1359,
+    "Manchester City": 50,
+    "Man City": 50, # Alias
+    "Manchester United": 33,
+    "Man United": 33, # Alias
+    "Newcastle": 34,
+    "Nottingham Forest": 65,
+    "Sheffield United": 62,
+    "Tottenham": 47,
+    "West Ham": 48,
+    "Wolves": 39,
 }
 
 
@@ -143,6 +156,13 @@ class MatchQuery(BaseModel):
     away_rest_days: int = 7
 
 # ---------------- ROUTES ----------------
+@app.get("/teams")
+def get_teams():
+    # Return list of teams available in our internal power_lookup
+    # This ensures consistency between frontend selection and backend data
+    teams = sorted(list(power_lookup.keys()))
+    return {"teams": teams}
+
 @app.post("/predict")
 def predict(q: MatchQuery):
     if q.home not in power_lookup or q.away not in power_lookup:
