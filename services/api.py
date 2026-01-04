@@ -21,123 +21,88 @@ app.add_middleware(
 )
 
 # ---------------- IMPORT MODELS ----------------
-from models.elo_engine import EloEngine
-from models.predictor import MatchPredictor
+from services.league_manager import LeagueManager
 from models.preview import generate_match_preview
 
 # ---------------- DATA LOAD ----------------
-DATA_PATH = Path(r"C:\WEB_PROJECTS\Ball_Knowledge\data\premier_league_2023_24.csv")
+league_manager = LeagueManager()
 
-print("Loading CSV and building engine...")
-df = pd.read_csv(DATA_PATH)
+DATA_DIR = Path(r"C:\WEB_PROJECTS\Ball_Knowledge\data")
 
-df["date"] = pd.to_datetime(df["date"])
-df = df.sort_values("date").reset_index(drop=True)
+# Define Leagues and their CSV paths
+LEAGUE_FILES = {
+    "PL": "E0.csv",
+    "LL": "SP1.csv",
+    "SA": "I1.csv",
+    "L1": "F1.csv",
+    "WC": "international_matches1.csv", 
+}
 
-# ---------------- TEAM MATCHES ----------------
-home_df = df[["date", "home", "home_goals", "away_goals"]].rename(
-    columns={"home": "team", "home_goals": "goals_for", "away_goals": "goals_against"}
-)
-home_df["is_home"] = 1
+print("Initializing Leagues...")
+for code, filename in LEAGUE_FILES.items():
+    path = DATA_DIR / filename
+    # For now, if file doesn't exist, we skip or fallback.
+    # To demonstrate functionality without all files, we can optionally use the PL file for others if needed
+    # but strictly we should check existence.
+    if path.exists():
+        league_manager.load_league(code, path)
+    else:
+        print(f"⚠️ Placeholder: {code} data not found at {path}. (Upload data to enable)")
+        # Fallback for Demo: Load PL data for other leagues if missing, JUST FOR DEMO purposes
+        # so the UI doesn't crash if the user selects them.
+        # REMOVE THIS IN PRODUCTION
+        if code != "PL" and (DATA_DIR / "premier_league_2023_24.csv").exists():
+             print(f"   -> Loading PL data as fallback for {code} (DEMO MODE)")
+             league_manager.load_league(code, DATA_DIR / "premier_league_2023_24.csv")
 
-away_df = df[["date", "away", "home_goals", "away_goals"]].rename(
-    columns={"away": "team", "away_goals": "goals_for", "home_goals": "goals_against"}
-)
-away_df["is_home"] = 0
 
-team_matches = pd.concat([home_df, away_df], ignore_index=True)
-
-def result_points(row):
-    if row["goals_for"] > row["goals_against"]:
-        return 3
-    elif row["goals_for"] < row["goals_against"]:
-        return 0
-    return 1
-
-team_matches["points"] = team_matches.apply(result_points, axis=1)
-team_matches = team_matches.sort_values(["team", "date"]).reset_index(drop=True)
-
-# ---------------- ROLLING STATS ----------------
-g = team_matches.groupby("team")
-
-team_matches["gf_last5"] = g["goals_for"].rolling(5, min_periods=1).mean().reset_index(level=0, drop=True)
-team_matches["ga_last5"] = g["goals_against"].rolling(5, min_periods=1).mean().reset_index(level=0, drop=True)
-team_matches["pts_last5"] = g["points"].rolling(5, min_periods=1).mean().reset_index(level=0, drop=True)
-team_matches["gf_last10"] = g["goals_for"].rolling(10, min_periods=1).mean().reset_index(level=0, drop=True)
-team_matches["ga_last10"] = g["goals_against"].rolling(10, min_periods=1).mean().reset_index(level=0, drop=True)
-
-final_stats = (
-    team_matches.sort_values("date")
-    .groupby("team")
-    .tail(1)[["team", "gf_last5", "ga_last5", "pts_last5", "gf_last10", "ga_last10"]]
-    .reset_index(drop=True)
-)
-
-# ---------------- ELO ----------------
-elo = EloEngine()
-elo.compute_season(df)
-
-elo_df = pd.DataFrame(
-    [{"team": t, "elo": v} for t, v in elo.team_elos.items()]
-)
-
-# ---------------- POWER SCORE ----------------
-tf = final_stats.merge(elo_df, on="team", how="left")
-
-tf["defence_strength"] = -tf["ga_last10"]
-tf["attack_strength"] = tf["gf_last10"]
-tf["form_strength"] = tf["pts_last5"]
-tf["elo_strength"] = tf["elo"]
-
-for c in ["elo_strength", "attack_strength", "defence_strength", "form_strength"]:
-    mn, mx = tf[c].min(), tf[c].max()
-    tf[c + "_norm"] = 0.5 if mn == mx else (tf[c] - mn) / (mx - mn)
-
-tf["raw_power"] = (
-    0.4 * tf["elo_strength_norm"]
-    + 0.25 * tf["attack_strength_norm"]
-    + 0.2 * tf["defence_strength_norm"]
-    + 0.15 * tf["form_strength_norm"]
-)
-
-mn, mx = tf["raw_power"].min(), tf["raw_power"].max()
-tf["power_score"] = 100 * (tf["raw_power"] - mn) / (mx - mn)
-
-power_table = tf[
-    ["team", "power_score", "elo", "gf_last10", "ga_last10", "pts_last5"]
-].sort_values("power_score", ascending=False)
-
-power_lookup = dict(zip(power_table["team"], power_table["power_score"]))
-
-predictor = MatchPredictor(elo, power_lookup)
-
-print("Startup finished. Teams:", list(power_lookup.keys()))
 # ---------------- TEAM ID MAP (API-Football) ----------------
-# ---------------- TEAM ID MAP (API-Football) ----------------
-# IDs based on standard API-Football mapping for Premier League
+# We need to expand this mapping for other leagues.
+# Ideally this should be a large Dictionary or Database.
 TEAM_ID_MAP = {
+    # PL
+    "Manchester City": 50, "Man City": 50,
     "Arsenal": 42,
-    "Aston Villa": 66,
-    "Bournemouth": 35,
-    "Brentford": 55,
-    "Brighton": 51,
-    "Burnley": 44,
-    "Chelsea": 49,
-    "Crystal Palace": 52,
-    "Everton": 45,
-    "Fulham": 36,
     "Liverpool": 40,
-    "Luton": 1359,
-    "Manchester City": 50,
-    "Man City": 50, # Alias
-    "Manchester United": 33,
-    "Man United": 33, # Alias
+    "Tottenham": 47, "Totenham": 47,
+    "Chelsea": 49,
+    "Manchester United": 33, "Man United": 33,
     "Newcastle": 34,
-    "Nottingham Forest": 65,
-    "Sheffield United": 62,
-    "Tottenham": 47,
+    "Aston Villa": 66,
+    "Brighton": 51,
     "West Ham": 48,
+    "Brentford": 55,
+    "Crystal Palace": 52,
     "Wolves": 39,
+    "Fulham": 36,
+    "Bournemouth": 35,
+    "Everton": 45,
+    "Nottingham Forest": 65, "Nottm Forest": 65,
+    "Burnley": 44,
+    "Sheffield United": 62,
+    "Luton": 1359,
+    
+    # La Liga (Examples)
+    "Real Madrid": 541,
+    "Barcelona": 529,
+    "Atlético Madrid": 530,
+    
+    # Serie A
+    "Juventus": 496,
+    "AC Milan": 489,
+    "Inter": 505,
+    
+    # Ligue 1
+    "PSG": 85,
+    "Paris Saint-Germain": 85,
+    
+    # National Teams (World Cup)
+    "Argentina": 26,
+    "France": 2,
+    "Brazil": 6,
+    "England": 10,
+    "Germany": 25,
+    "Spain": 9    
 }
 
 
@@ -154,19 +119,31 @@ class MatchQuery(BaseModel):
     away_injuries: list[Injury] = []
     home_rest_days: int = 7
     away_rest_days: int = 7
+    league: str = "PL" # Default to PL
 
 # ---------------- ROUTES ----------------
 @app.get("/teams")
-def get_teams():
-    # Return list of teams available in our internal power_lookup
-    # This ensures consistency between frontend selection and backend data
-    teams = sorted(list(power_lookup.keys()))
+def get_teams(league: str = "PL"):
+    # Return list of teams available in our internal power_lookup for a given league
+    ctx = league_manager.get_league(league)
+    if not ctx:
+        return {"teams": []} # Or raise HTTPException
+    teams = sorted(list(ctx["power_lookup"].keys()))
     return {"teams": teams}
 
 @app.post("/predict")
 def predict(q: MatchQuery):
+    ctx = league_manager.get_league(q.league)
+    if not ctx:
+        raise HTTPException(status_code=404, detail=f"League '{q.league}' not loaded or data missing.")
+    
+    predictor = ctx["predictor"]
+    power_lookup = ctx["power_lookup"]
+
     if q.home not in power_lookup or q.away not in power_lookup:
-        raise HTTPException(status_code=400, detail="Unknown team name")
+        # Fallback: Try to predict without power scores if teams are missing from CSV but defined
+        # For now error out
+        raise HTTPException(status_code=400, detail=f"Unknown team name in {q.league}: '{q.home}' or '{q.away}'")
 
     # dict conversion for the predictor
     h_inj = [i.dict() for i in q.home_injuries]
@@ -190,15 +167,32 @@ def predict(q: MatchQuery):
     }
 
 @app.get("/preview")
-def preview(home: str, away: str):
+def preview(home: str, away: str, league: str = "PL"):
+    ctx = league_manager.get_league(league)
+    if not ctx:
+        raise HTTPException(status_code=404, detail="League not found")
+        
+    predictor = ctx["predictor"]
+    power_table = ctx["power_table"]
+    elo_df = ctx["elo_df"]
+    final_stats = ctx["final_stats"]
+    
+    # We need a merged dataframe for generate_match_preview
+    # In initial code it was: final_stats.merge(elo_df, on="team")
+    # In LeagueManager we have them.
+    merged = final_stats.merge(elo_df, on="team")
+
     text = generate_match_preview(
-        home, away, predictor, power_table, final_stats.merge(elo_df, on="team")
+        home, away, predictor, power_table, merged
     )
     return {"preview": text}
 
 @app.get("/power_table")
-def get_power_table():
-    return power_table.to_dict(orient="records")
+def get_power_table(league: str = "PL"):
+    ctx = league_manager.get_league(league)
+    if not ctx:
+        return []
+    return ctx["power_table"].to_dict(orient="records")
 # ---------------- AUTO INJURIES ----------------
 @app.get("/auto_injuries")
 def auto_injuries(team: str):

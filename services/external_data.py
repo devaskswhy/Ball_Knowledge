@@ -11,13 +11,13 @@ HEADERS = {
 }
 BASE_URL = "https://v3.football.api-sports.io"
 
-def get_injuries(team_id):
+def get_injuries(team_id, season=2024):
     if not API_KEY:
         print("Warning: No API Key found.")
         return []
         
     url = f"{BASE_URL}/injuries"
-    params = {"team": team_id, "season": 2023} # Using 2023 for the dataset context
+    params = {"team": team_id, "season": season}
 
     try:
         r = requests.get(url, headers=HEADERS, params=params)
@@ -50,7 +50,7 @@ def get_injuries(team_id):
     
     return injuries[:8] # Limit to 8 to avoid clutter
 
-def get_last_match_date(team_id):
+def get_last_match_date(team_id, season=2024):
     if not API_KEY:
         return None
 
@@ -60,7 +60,7 @@ def get_last_match_date(team_id):
         "team": team_id, 
         "last": 1, 
         "status": "FT",
-        "season": 2023 # Align with dataset season
+        "season": season
     }
 
     try:
