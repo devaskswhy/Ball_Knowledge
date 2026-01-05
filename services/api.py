@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import pandas as pd
+import json
 from pathlib import Path
 from services.external_data import get_injuries, role_counts
 
@@ -105,6 +106,18 @@ TEAM_ID_MAP = {
     "Spain": 9    
 }
 
+# ---------------- LOAD DYNAMIC ID MAP ----------------
+TEAM_MAP_FILE = DATA_DIR / "team_id_map.json"
+if TEAM_MAP_FILE.exists():
+    try:
+        with open(TEAM_MAP_FILE, "r") as f:
+            dynamic_map = json.load(f)
+            print(f"Loaded {len(dynamic_map)} teams from team_id_map.json")
+            # Update the main map
+            TEAM_ID_MAP.update(dynamic_map)
+    except Exception as e:
+        print(f"Error loading team map: {e}")
+
 
 # ---------------- API MODELS ----------------
 class Injury(BaseModel):
@@ -128,8 +141,19 @@ def get_teams(league: str = "PL"):
     ctx = league_manager.get_league(league)
     if not ctx:
         return {"teams": []} # Or raise HTTPException
-    teams = sorted(list(ctx["power_lookup"].keys()))
-    return {"teams": teams}
+    
+    team_names = sorted(list(ctx["power_lookup"].keys()))
+    
+    # Map to objects with IDs for Badges
+    teams_data = []
+    for name in team_names:
+        tid = TEAM_ID_MAP.get(name)
+        teams_data.append({
+            "name": name,
+            "id": tid
+        })
+        
+    return {"teams": teams_data}
 
 @app.post("/predict")
 def predict(q: MatchQuery):
