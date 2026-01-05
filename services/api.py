@@ -210,14 +210,25 @@ def auto_injuries(team: str):
     }
 
 # ---------------- LIVE DATA ----------------
-from services.external_data import get_last_match_date
+from services.external_data import get_last_match_date, search_team_id, get_lineup
 from datetime import datetime
 import pytz
 
 @app.get("/live_data")
 def live_data(home: str, away: str):
+    # Dynamic ID resolution
+    for team_name in [home, away]:
+        if team_name not in TEAM_ID_MAP:
+            print(f"Searching API for ID of '{team_name}'...")
+            found_id = search_team_id(team_name)
+            if found_id:
+                TEAM_ID_MAP[team_name] = found_id
+                print(f" -> Found ID: {found_id}")
+            else:
+                print(f" -> ID not found for '{team_name}'")
+
     if home not in TEAM_ID_MAP or away not in TEAM_ID_MAP:
-        raise HTTPException(status_code=400, detail="One or more teams not mapped")
+        raise HTTPException(status_code=404, detail="Could not find API ID for one or more teams.")
 
     hid = TEAM_ID_MAP[home]
     aid = TEAM_ID_MAP[away]
@@ -226,7 +237,11 @@ def live_data(home: str, away: str):
     h_inj = get_injuries(hid)
     a_inj = get_injuries(aid)
 
-    # 2. Rest Days Calculation
+    # 2. Lineups (Active/Last Match)
+    h_lineup = get_lineup(hid)
+    a_lineup = get_lineup(aid)
+
+    # 3. Rest Days Calculation
     def calc_rest(tid):
         last_date_str = get_last_match_date(tid)
         if not last_date_str:
@@ -255,6 +270,8 @@ def live_data(home: str, away: str):
     return {
         "home_injuries": h_inj,
         "away_injuries": a_inj,
+        "home_lineup": h_lineup,
+        "away_lineup": a_lineup,
         "home_rest": h_rest,
         "away_rest": a_rest
     }
