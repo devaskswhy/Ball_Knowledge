@@ -4,7 +4,7 @@ from pydantic import BaseModel
 import pandas as pd
 import json
 from pathlib import Path
-from services.external_data import get_injuries, role_counts
+from services.external_data import get_injuries, role_counts, get_squad, search_team_id
 
 
 # ---------------- APP ----------------
@@ -154,6 +154,28 @@ def get_teams(league: str = "PL"):
         })
         
     return {"teams": teams_data}
+
+@app.get("/squad")
+def get_team_squad(team: str):
+    """Get full squad roster with player photos and ratings"""
+    # Resolve team name to ID
+    team_id = TEAM_ID_MAP.get(team)
+    
+    if not team_id:
+        # Try searching API
+        team_id = search_team_id(team)
+        if team_id:
+            TEAM_ID_MAP[team] = team_id  # Cache for future
+    
+    if not team_id:
+        raise HTTPException(status_code=404, detail=f"Team '{team}' not found")
+    
+    squad = get_squad(team_id)
+    
+    if not squad:
+        raise HTTPException(status_code=404, detail=f"No squad data available for '{team}'")
+    
+    return {"team": team, "squad": squad}
 
 @app.post("/predict")
 def predict(q: MatchQuery):

@@ -145,3 +145,58 @@ def get_lineup(team_id, season=2024):
     except Exception as e:
         print(f"Lineup fetch error for {team_id}: {e}")
         return []
+
+def get_squad(team_id):
+    """Fetch full squad roster with player photos and details"""
+    if not API_KEY:
+        return []
+    
+    url = f"{BASE_URL}/players/squads"
+    params = {"team": team_id}
+    
+    try:
+        r = requests.get(url, headers=HEADERS, params=params)
+        data = r.json().get("response", [])
+        
+        if not data:
+            return []
+        
+        players = data[0].get("players", [])
+        squad = []
+        
+        for p in players:
+            # Map position to short format
+            pos_map = {
+                "Goalkeeper": "GK",
+                "Defender": "DEF", 
+                "Midfielder": "MID",
+                "Attacker": "ATT"
+            }
+            position = pos_map.get(p.get("position"), "MID")
+            
+            # Generate a rating (API doesn't provide, estimate based on age)
+            age = p.get("age", 25)
+            base_rating = 75
+            if age < 23:
+                rating = base_rating + (age - 18)  # Young talent: 75-80
+            elif age < 30:
+                rating = base_rating + 5 + (30 - age) // 2  # Prime: 78-85
+            else:
+                rating = base_rating + 3 - (age - 30)  # Veteran: 75-78
+            rating = max(65, min(95, rating))  # Clamp
+            
+            squad.append({
+                "id": p.get("id"),
+                "name": p.get("name"),
+                "age": p.get("age"),
+                "number": p.get("number"),
+                "position": position,
+                "photo": p.get("photo"),
+                "rating": rating
+            })
+        
+        return squad
+        
+    except Exception as e:
+        print(f"Squad fetch error for {team_id}: {e}")
+        return []
