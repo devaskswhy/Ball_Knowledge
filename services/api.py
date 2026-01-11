@@ -157,7 +157,9 @@ def get_teams(league: str = "PL"):
 
 @app.get("/squad")
 def get_team_squad(team: str):
-    """Get full squad roster with player photos and ratings"""
+    """Get full squad roster with player photos and ratings, plus real lineup"""
+    from services.external_data import get_lineup
+    
     # Resolve team name to ID
     team_id = TEAM_ID_MAP.get(team)
     
@@ -175,7 +177,11 @@ def get_team_squad(team: str):
     if not squad:
         raise HTTPException(status_code=404, detail=f"No squad data available for '{team}'")
     
-    return {"team": team, "squad": squad}
+    # Get actual lineup from last match
+    lineup = get_lineup(team_id)
+    lineup_ids = [int(p["id"]) for p in lineup] if lineup else []
+    
+    return {"team": team, "squad": squad, "lineup_ids": lineup_ids}
 
 @app.post("/predict")
 def predict(q: MatchQuery):
