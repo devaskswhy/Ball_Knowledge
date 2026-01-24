@@ -200,3 +200,121 @@ def get_squad(team_id):
     except Exception as e:
         print(f"Squad fetch error for {team_id}: {e}")
         return []
+
+
+def get_featured_fixtures():
+    """Get today's top fixtures from top 5 leagues"""
+    if not API_KEY:
+        return []
+    
+    from datetime import datetime
+    today = datetime.now().strftime("%Y-%m-%d")
+    
+    # Top 5 league IDs: PL=39, La Liga=140, Serie A=135, Bundesliga=78, Ligue 1=61
+    top_leagues = [39, 140, 135, 78, 61]
+    
+    try:
+        url = f"{BASE_URL}/fixtures"
+        params = {"date": today}
+        r = requests.get(url, headers=HEADERS, params=params)
+        data = r.json().get("response", [])
+        
+        featured = []
+        for match in data:
+            league_id = match.get("league", {}).get("id")
+            if league_id in top_leagues:
+                featured.append({
+                    "id": match.get("fixture", {}).get("id"),
+                    "date": match.get("fixture", {}).get("date"),
+                    "status": match.get("fixture", {}).get("status", {}).get("short"),
+                    "home": {
+                        "id": match.get("teams", {}).get("home", {}).get("id"),
+                        "name": match.get("teams", {}).get("home", {}).get("name"),
+                        "logo": match.get("teams", {}).get("home", {}).get("logo"),
+                    },
+                    "away": {
+                        "id": match.get("teams", {}).get("away", {}).get("id"),
+                        "name": match.get("teams", {}).get("away", {}).get("name"),
+                        "logo": match.get("teams", {}).get("away", {}).get("logo"),
+                    },
+                    "league": {
+                        "name": match.get("league", {}).get("name"),
+                        "logo": match.get("league", {}).get("logo"),
+                    },
+                    "score": {
+                        "home": match.get("goals", {}).get("home"),
+                        "away": match.get("goals", {}).get("away"),
+                    }
+                })
+        
+        return featured[:5]  # Return top 5 matches
+        
+    except Exception as e:
+        print(f"Featured fixtures error: {e}")
+        return []
+
+
+def get_top_players(league_id=39, season=2024):
+    """Get top rated players from a league"""
+    if not API_KEY:
+        return []
+    
+    try:
+        url = f"{BASE_URL}/players/topscorers"
+        params = {"league": league_id, "season": season}
+        r = requests.get(url, headers=HEADERS, params=params)
+        data = r.json().get("response", [])
+        
+        players = []
+        for p in data[:10]:
+            player = p.get("player", {})
+            stats = p.get("statistics", [{}])[0]
+            
+            players.append({
+                "id": player.get("id"),
+                "name": player.get("name"),
+                "photo": player.get("photo"),
+                "age": player.get("age"),
+                "nationality": player.get("nationality"),
+                "team": {
+                    "name": stats.get("team", {}).get("name"),
+                    "logo": stats.get("team", {}).get("logo"),
+                },
+                "goals": stats.get("goals", {}).get("total", 0),
+                "assists": stats.get("goals", {}).get("assists", 0),
+                "rating": stats.get("games", {}).get("rating"),
+            })
+        
+        return players
+        
+    except Exception as e:
+        print(f"Top players error: {e}")
+        return []
+
+
+def get_team_colors(team_id):
+    """Get team primary and secondary colors"""
+    if not API_KEY:
+        return {"primary": "#6366f1", "secondary": "#22d3ee"}
+    
+    try:
+        url = f"{BASE_URL}/teams"
+        params = {"id": team_id}
+        r = requests.get(url, headers=HEADERS, params=params)
+        data = r.json().get("response", [])
+        
+        if data:
+            team = data[0].get("team", {})
+            # API doesn't provide colors directly, so we'll use logo color extraction or defaults
+            # For now return based on team name patterns
+            return {
+                "primary": "#6366f1",  # Default indigo
+                "secondary": "#22d3ee",  # Default cyan
+                "logo": team.get("logo")
+            }
+        
+        return {"primary": "#6366f1", "secondary": "#22d3ee"}
+        
+    except Exception as e:
+        print(f"Team colors error: {e}")
+        return {"primary": "#6366f1", "secondary": "#22d3ee"}

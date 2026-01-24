@@ -4,7 +4,7 @@ from pydantic import BaseModel
 import pandas as pd
 import json
 from pathlib import Path
-from services.external_data import get_injuries, role_counts, get_squad, search_team_id
+from services.external_data import get_injuries, role_counts, get_squad, search_team_id, get_featured_fixtures, get_top_players, get_team_colors
 
 
 # ---------------- APP ----------------
@@ -182,6 +182,21 @@ def get_team_squad(team: str):
     lineup_ids = [int(p["id"]) for p in lineup] if lineup else []
     
     return {"team": team, "squad": squad, "lineup_ids": lineup_ids}
+
+@app.get("/homepage")
+def get_homepage_data():
+    """Get data for the homepage: featured fixtures, top players"""
+    fixtures = get_featured_fixtures()
+    top_players = get_top_players(league_id=39, season=2024)  # Default: Premier League
+    
+    # Get player of the week (top scorer with best stats)
+    player_of_week = top_players[0] if top_players else None
+    
+    return {
+        "featured_fixtures": fixtures,
+        "top_players": top_players[:5],
+        "player_of_week": player_of_week
+    }
 
 @app.post("/predict")
 def predict(q: MatchQuery):
