@@ -187,7 +187,7 @@ def get_team_squad(team: str):
 def get_homepage_data():
     """Get data for the homepage: featured fixtures, top players"""
     fixtures = get_featured_fixtures()
-    top_players = get_top_players(league_id=39, season=2024)  # Default: Premier League
+    top_players = get_top_players(season=2024)  # Fetch from all major leagues
     
     # Get player of the week (top scorer with best stats)
     player_of_week = top_players[0] if top_players else None

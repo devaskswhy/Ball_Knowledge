@@ -3,7 +3,7 @@ import requests
 from dotenv import load_dotenv
 
 load_dotenv()
-API_KEY = os.getenv("API_FOOTBALL_KEY")
+API_KEY = os.getenv("API_FOOTBALL_KEY") or "317800f2e0db88981b54a22857699974"
 
 HEADERS = {
     "x-apisports-key": API_KEY,
@@ -254,41 +254,62 @@ def get_featured_fixtures():
         return []
 
 
-def get_top_players(league_id=39, season=2024):
-    """Get top rated players from a league"""
+def get_top_players(season=2024):
+    """Get top impact players across all major leagues based on rating and performance"""
     if not API_KEY:
         return []
     
+    # Top 5 league IDs: PL=39, La Liga=140, Serie A=135, Bundesliga=78, Ligue 1=61
+    top_leagues = [39, 140, 135, 78, 61]
+    all_players = []
+    
     try:
         url = f"{BASE_URL}/players/topscorers"
-        params = {"league": league_id, "season": season}
-        r = requests.get(url, headers=HEADERS, params=params)
-        data = r.json().get("response", [])
         
-        players = []
-        for p in data[:10]:
-            player = p.get("player", {})
-            stats = p.get("statistics", [{}])[0]
+        for league_id in top_leagues:
+            params = {"league": league_id, "season": season}
+            r = requests.get(url, headers=HEADERS, params=params)
+            data = r.json().get("response", [])
             
-            players.append({
-                "id": player.get("id"),
-                "name": player.get("name"),
-                "photo": player.get("photo"),
-                "age": player.get("age"),
-                "nationality": player.get("nationality"),
-                "team": {
-                    "name": stats.get("team", {}).get("name"),
-                    "logo": stats.get("team", {}).get("logo"),
-                },
-                "goals": stats.get("goals", {}).get("total", 0),
-                "assists": stats.get("goals", {}).get("assists", 0),
-                "rating": stats.get("games", {}).get("rating"),
-            })
+            for p in data[:3]:  # Top 3 from each league
+                player = p.get("player", {})
+                stats = p.get("statistics", [{}])[0]
+                
+                # Format rating to 1 decimal place
+                raw_rating = stats.get("games", {}).get("rating")
+                formatted_rating = f"{float(raw_rating):.1f}" if raw_rating else None
+                
+                all_players.append({
+                    "id": player.get("id"),
+                    "name": player.get("name"),
+                    "photo": player.get("photo"),
+                    "age": player.get("age"),
+                    "nationality": player.get("nationality"),
+                    "team": {
+                        "name": stats.get("team", {}).get("name"),
+                        "logo": stats.get("team", {}).get("logo"),
+                    },
+                    "goals": stats.get("goals", {}).get("total", 0),
+                    "assists": stats.get("goals", {}).get("assists", 0),
+                    "rating": formatted_rating,
+                })
         
-        return players
+        print(f"Fetched {len(all_players)} players total from all leagues")
+        
+        # Sort by rating (primary), goals (secondary), assists (tertiary) - for impact players
+        def sort_key(p):
+            rating_val = float(p["rating"] or 0)
+            return (rating_val, p["goals"], p["assists"])
+        
+        all_players.sort(key=sort_key, reverse=True)
+        
+        # Return top 5 players overall
+        return all_players[:5]
         
     except Exception as e:
         print(f"Top players error: {e}")
+        import traceback
+        traceback.print_exc()
         return []
 
 
