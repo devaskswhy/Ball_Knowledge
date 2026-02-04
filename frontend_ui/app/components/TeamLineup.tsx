@@ -196,7 +196,7 @@ export default function TeamLineup({ teamName }: TeamLineupProps) {
                     variant="outline"
                     size="sm"
                     onClick={() => setShowBench(!showBench)}
-                    className="gap-2"
+                    className="gap-2 border-primary/30 hover:bg-primary/20 hover:text-primary transition-colors"
                 >
                     <Users className="h-4 w-4" />
                     {showBench ? "Hide" : "Show"} Bench ({bench.length} players)

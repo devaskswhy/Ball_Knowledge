@@ -257,7 +257,7 @@ export default function Home() {
                         <p className="text-xs text-muted-foreground">Away Win</p>
                       </div>
                     </div>
-                    <Button onClick={generatePreview} variant="outline" className="w-full mt-4">
+                    <Button onClick={generatePreview} variant="outline" className="w-full mt-4 border-primary/30 hover:bg-primary/20 hover:text-primary transition-colors">
                       Generate AI Preview
                     </Button>
                     {preview && <p className="mt-4 text-sm">{preview}</p>}
@@ -308,6 +308,7 @@ export default function Home() {
             onClick={() => setShowLineup(!showLineup)}
             variant="outline"
             disabled={!home || !away}
+            className="border-primary/30 hover:bg-primary/20 hover:text-primary transition-colors"
           >
             <Users className="mr-2 h-4 w-4" />
             {showLineup ? "Hide" : "Show"} Team Lineups
