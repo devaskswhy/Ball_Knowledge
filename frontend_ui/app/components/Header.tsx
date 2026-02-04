@@ -60,13 +60,6 @@ export function Header({ league, setLeague }: HeaderProps) {
                                 ))}
                             </select>
                         </div>
-
-                        <Link href="#lineup" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
-                            Lineup
-                        </Link>
-                        <Link href="#stats" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
-                            Stats
-                        </Link>
                     </nav>
 
                     {/* Actions */}
@@ -117,13 +110,6 @@ export function Header({ league, setLeague }: HeaderProps) {
                                     ))}
                                 </select>
                             </div>
-
-                            <Link href="#lineup" className="text-sm font-medium text-muted-foreground">
-                                Lineup
-                            </Link>
-                            <Link href="#stats" className="text-sm font-medium text-muted-foreground">
-                                Stats
-                            </Link>
                         </nav>
                     </div>
                 )}

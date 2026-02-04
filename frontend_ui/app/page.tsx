@@ -44,7 +44,6 @@ export default function Home() {
   const [awayRest, setAwayRest] = useState<number>(7);
 
   const [teams, setTeams] = useState<{ name: string, id: number | null }[]>([]);
-  const [squadTeam, setSquadTeam] = useState<string | null>(null);
 
   // Fetch teams when league changes
   useEffect(() => {
@@ -276,21 +275,42 @@ export default function Home() {
         </section>
 
         {/* Lineup Builder */}
-        {showLineup && squadTeam && (
+        {showLineup && home && away && (
           <section id="lineup">
-            <LineupBuilder teamName={squadTeam} />
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-primary" />
+                  Team Lineups
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Home Team Lineup */}
+                  <div>
+                    <h3 className="text-lg font-bold mb-4 text-center">{home}</h3>
+                    <LineupBuilder teamName={home} />
+                  </div>
+
+                  {/* Away Team Lineup */}
+                  <div>
+                    <h3 className="text-lg font-bold mb-4 text-center">{away}</h3>
+                    <LineupBuilder teamName={away} />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </section>
         )}
 
         <div className="text-center">
           <Button
-            onClick={() => {
-              setSquadTeam(home);
-              setShowLineup(!showLineup);
-            }}
+            onClick={() => setShowLineup(!showLineup)}
             variant="outline"
+            disabled={!home || !away}
           >
-            {showLineup ? "Hide" : "Show"} Lineup Builder
+            <Users className="mr-2 h-4 w-4" />
+            {showLineup ? "Hide" : "Show"} Team Lineups
           </Button>
         </div>
       </main>
