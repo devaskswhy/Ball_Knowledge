@@ -8,6 +8,7 @@ import InjurySelector, { Injury } from "./components/InjurySelector";
 import MatchContext from "./components/MatchContext";
 import TeamCombobox from "./components/TeamCombobox";
 import LineupBuilder from "./components/LineupBuilder";
+import TeamLineup from "./components/TeamLineup";
 import HomepageHero from "./components/HomepageHero";
 import { Header } from "./components/Header";
 import { Footer } from "./components/Footer";
@@ -272,7 +273,7 @@ export default function Home() {
           </Card>
         </section>
 
-        {/* Lineup Builder */}
+        {/* Team Lineups */}
         {showLineup && home && away && (
           <section id="lineup">
             <Card>
@@ -286,14 +287,14 @@ export default function Home() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Home Team Lineup */}
                   <div>
-                    <h3 className="text-lg font-bold mb-4 text-center">{home}</h3>
-                    <LineupBuilder teamName={home} />
+                    <h3 className="text-lg font-bold mb-4 text-center border-b border-border pb-2">{home}</h3>
+                    <TeamLineup teamName={home} />
                   </div>
 
                   {/* Away Team Lineup */}
                   <div>
-                    <h3 className="text-lg font-bold mb-4 text-center">{away}</h3>
-                    <LineupBuilder teamName={away} />
+                    <h3 className="text-lg font-bold mb-4 text-center border-b border-border pb-2">{away}</h3>
+                    <TeamLineup teamName={away} />
                   </div>
                 </div>
               </CardContent>
