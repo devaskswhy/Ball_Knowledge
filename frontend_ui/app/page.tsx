@@ -172,21 +172,19 @@ export default function Home() {
               {/* Team Selection */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Home Team</label>
                   <TeamCombobox
+                    label="Home Team"
                     teams={teams}
-                    value={home}
-                    onChange={setHome}
-                    placeholder="Select home team"
+                    selectedTeam={home}
+                    setSelectedTeam={setHome}
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Away Team</label>
                   <TeamCombobox
+                    label="Away Team"
                     teams={teams}
-                    value={away}
-                    onChange={setAway}
-                    placeholder="Select away team"
+                    selectedTeam={away}
+                    setSelectedTeam={setAway}
                   />
                 </div>
               </div>
