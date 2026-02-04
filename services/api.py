@@ -281,6 +281,34 @@ from services.external_data import get_last_match_date, search_team_id, get_line
 from datetime import datetime
 import pytz
 
+@app.get("/injuries")
+def get_team_injuries_endpoint(team: str):
+    if team not in TEAM_ID_MAP:
+        # Try to resolve dynamic ID
+        found_id = search_team_id(team)
+        if found_id:
+            TEAM_ID_MAP[team] = found_id
+        else:
+            raise HTTPException(status_code=404, detail=f"Team '{team}' not found")
+
+    tid = TEAM_ID_MAP[team]
+    inj = get_injuries(tid)
+    
+    # Calc rest
+    rest = 7
+    try:
+        last_date_str = get_last_match_date(tid)
+        if last_date_str:
+            last_date = datetime.fromisoformat(last_date_str)
+            now = datetime.now(pytz.utc)
+            delta = (now - last_date).days
+            if 0 <= delta <= 30:
+                rest = max(1, delta)
+    except Exception as e:
+        print(f"Rest calc error: {e}")
+
+    return {"injuries": inj, "rest_days": rest}
+
 @app.get("/live_data")
 def live_data(home: str, away: str):
     # Dynamic ID resolution
