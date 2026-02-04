@@ -207,6 +207,7 @@ export default function Home() {
                       value={homeRest}
                       onChange={(e) => setHomeRest(parseInt(e.target.value))}
                       className="w-full mt-1 px-3 py-2 rounded-lg bg-secondary border border-border focus:ring-2 focus:ring-primary"
+                      suppressHydrationWarning
                     />
                   </div>
                 </div>
@@ -223,6 +224,7 @@ export default function Home() {
                       value={awayRest}
                       onChange={(e) => setAwayRest(parseInt(e.target.value))}
                       className="w-full mt-1 px-3 py-2 rounded-lg bg-secondary border border-border focus:ring-2 focus:ring-primary"
+                      suppressHydrationWarning
                     />
                   </div>
                 </div>

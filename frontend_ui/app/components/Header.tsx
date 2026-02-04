@@ -51,6 +51,7 @@ export function Header({ league, setLeague }: HeaderProps) {
                                 value={league}
                                 onChange={(e) => setLeague(e.target.value)}
                                 className="bg-transparent text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary rounded px-2 py-1"
+                                suppressHydrationWarning
                             >
                                 {LEAGUES.map((l) => (
                                     <option key={l.code} value={l.code} className="bg-background">
@@ -107,6 +108,7 @@ export function Header({ league, setLeague }: HeaderProps) {
                                     value={league}
                                     onChange={(e) => setLeague(e.target.value)}
                                     className="bg-secondary text-sm font-medium rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
+                                    suppressHydrationWarning
                                 >
                                     {LEAGUES.map((l) => (
                                         <option key={l.code} value={l.code}>
