@@ -89,11 +89,12 @@ export default function Home() {
     if (!result || result.error) return;
     setLoadingPreview(true);
     try {
-      const res = await axios.post("http://localhost:8000/preview", {
-        home,
-        away,
-        probabilities: result.probabilities,
-        league
+      const res = await axios.get("http://localhost:8000/preview", {
+        params: {
+          home,
+          away,
+          league
+        }
       });
       setPreview(res.data.preview);
     } catch (error) {
@@ -197,7 +198,7 @@ export default function Home() {
                     <AlertTriangle className="h-4 w-4 text-destructive" />
                     {home || "Home"} Injuries
                   </label>
-                  <InjurySelector injuries={homeInjuries} setInjuries={setHomeInjuries} />
+                  <InjurySelector teamName={home} injuries={homeInjuries} setInjuries={setHomeInjuries} />
                   <div className="mt-4">
                     <label className="text-xs text-muted-foreground">Rest Days</label>
                     <input
@@ -214,7 +215,7 @@ export default function Home() {
                     <AlertTriangle className="h-4 w-4 text-destructive" />
                     {away || "Away"} Injuries
                   </label>
-                  <InjurySelector injuries={awayInjuries} setInjuries={setAwayInjuries} />
+                  <InjurySelector teamName={away} injuries={awayInjuries} setInjuries={setAwayInjuries} />
                   <div className="mt-4">
                     <label className="text-xs text-muted-foreground">Rest Days</label>
                     <input
@@ -239,20 +240,20 @@ export default function Home() {
               </Button>
 
               {/* Results */}
-              {result && !result.error && (
+              {result && !result.error && result.home_win !== undefined && (
                 <Card className="bg-secondary">
                   <CardContent className="pt-6">
                     <div className="grid grid-cols-3 gap-4 text-center">
                       <div>
-                        <p className="text-2xl font-bold text-primary">{(result.probabilities.home * 100).toFixed(1)}%</p>
+                        <p className="text-2xl font-bold text-primary">{result.home_win}%</p>
                         <p className="text-xs text-muted-foreground">Home Win</p>
                       </div>
                       <div>
-                        <p className="text-2xl font-bold">{(result.probabilities.draw * 100).toFixed(1)}%</p>
+                        <p className="text-2xl font-bold">{result.draw}%</p>
                         <p className="text-xs text-muted-foreground">Draw</p>
                       </div>
                       <div>
-                        <p className="text-2xl font-bold text-accent">{(result.probabilities.away * 100).toFixed(1)}%</p>
+                        <p className="text-2xl font-bold text-accent">{result.away_win}%</p>
                         <p className="text-xs text-muted-foreground">Away Win</p>
                       </div>
                     </div>
