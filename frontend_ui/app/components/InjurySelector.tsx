@@ -53,9 +53,9 @@ export default function InjurySelector({
         {injuries.length === 0 && (
           <p className="text-sm text-gray-500 italic">No injuries selected.</p>
         )}
-        {injuries.map((inj) => (
+        {injuries.map((inj, index) => (
           <div
-            key={inj.id}
+            key={inj.id || index}
             className="flex items-center justify-between bg-[#0D1324] p-2 rounded-lg border border-[#27345A]"
           >
             <div>
@@ -95,8 +95,8 @@ export default function InjurySelector({
             <option value="ATT">ATT</option>
           </select>
           <div className="flex items-center gap-2 flex-1 px-2">
-             <span className="text-xs text-gray-400">Imp:</span>
-             <input
+            <span className="text-xs text-gray-400">Imp:</span>
+            <input
               type="range"
               min="1"
               max="10"

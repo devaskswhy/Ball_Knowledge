@@ -4,7 +4,7 @@ from pydantic import BaseModel
 import pandas as pd
 import json
 from pathlib import Path
-from services.external_data import get_injuries, role_counts, get_squad, search_team_id, get_featured_fixtures, get_top_players, get_team_colors
+from services.external_data import get_injuries, role_counts, get_squad, search_team_id, get_featured_fixtures, get_top_players, get_team_colors, get_player_stats
 
 
 # ---------------- APP ----------------
@@ -276,98 +276,17 @@ def auto_injuries(team: str):
         "role_counts": roles
     }
 
+@app.get("/player_stats")
+def get_player_stats_endpoint(player_id: int, season: int = 2024, league: int = 39):
+    """Get detailed player stats for a specific season and league"""
+    stats = get_player_stats(player_id, season, league)
+    if not stats:
+        # Return empty or specific structure to handle "no data" gracefully
+        return {"player": {}, "statistics": {}}
+    return stats
+
 # ---------------- LIVE DATA ----------------
-from services.external_data import get_last_match_date, search_team_id, get_lineup
-from datetime import datetime
-import pytz
 
-@app.get("/injuries")
-def get_team_injuries_endpoint(team: str):
-    if team not in TEAM_ID_MAP:
-        # Try to resolve dynamic ID
-        found_id = search_team_id(team)
-        if found_id:
-            TEAM_ID_MAP[team] = found_id
-        else:
-            raise HTTPException(status_code=404, detail=f"Team '{team}' not found")
 
-    tid = TEAM_ID_MAP[team]
-    inj = get_injuries(tid)
-    
-    # Calc rest
-    rest = 7
-    try:
-        last_date_str = get_last_match_date(tid)
-        if last_date_str:
-            last_date = datetime.fromisoformat(last_date_str)
-            now = datetime.now(pytz.utc)
-            delta = (now - last_date).days
-            if 0 <= delta <= 30:
-                rest = max(1, delta)
-    except Exception as e:
-        print(f"Rest calc error: {e}")
 
-    return {"injuries": inj, "rest_days": rest}
-
-@app.get("/live_data")
-def live_data(home: str, away: str):
-    # Dynamic ID resolution
-    for team_name in [home, away]:
-        if team_name not in TEAM_ID_MAP:
-            print(f"Searching API for ID of '{team_name}'...")
-            found_id = search_team_id(team_name)
-            if found_id:
-                TEAM_ID_MAP[team_name] = found_id
-                print(f" -> Found ID: {found_id}")
-            else:
-                print(f" -> ID not found for '{team_name}'")
-
-    if home not in TEAM_ID_MAP or away not in TEAM_ID_MAP:
-        raise HTTPException(status_code=404, detail="Could not find API ID for one or more teams.")
-
-    hid = TEAM_ID_MAP[home]
-    aid = TEAM_ID_MAP[away]
-
-    # 1. Injuries
-    h_inj = get_injuries(hid)
-    a_inj = get_injuries(aid)
-
-    # 2. Lineups (Active/Last Match)
-    h_lineup = get_lineup(hid)
-    a_lineup = get_lineup(aid)
-
-    # 3. Rest Days Calculation
-    def calc_rest(tid):
-        last_date_str = get_last_match_date(tid)
-        if not last_date_str:
-            return 7 # Default
-        
-        # Parse ISO format: 2024-04-20T15:00:00+00:00
-        # We need to be careful with timezones.
-        try:
-            last_date = datetime.fromisoformat(last_date_str)
-            # For this project, we'll assume "Now" is the time of the request
-            # But since the data is 2023-24 season, "Now" might be far ahead.
-            # If the gap is huge (> 30 days), assume it's a new season or break -> 7 days.
-            now = datetime.now(pytz.utc)
-            delta = (now - last_date).days
-            
-            if delta > 30 or delta < 0:
-                return 7
-            return max(1, delta)
-        except Exception as e:
-            print(f"Date parse error: {e}")
-            return 7
-
-    h_rest = calc_rest(hid)
-    a_rest = calc_rest(aid)
-
-    return {
-        "home_injuries": h_inj,
-        "away_injuries": a_inj,
-        "home_lineup": h_lineup,
-        "away_lineup": a_lineup,
-        "home_rest": h_rest,
-        "away_rest": a_rest
-    }
 

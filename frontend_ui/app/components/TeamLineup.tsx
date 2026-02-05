@@ -5,6 +5,7 @@ import axios from "axios";
 import Image from "next/image";
 import { Users, Loader2 } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
+import PlayerStatsModal from "./PlayerStatsModal";
 
 interface Player {
     id: number;
@@ -35,6 +36,7 @@ export default function TeamLineup({ teamName }: TeamLineupProps) {
     const [error, setError] = useState("");
     const [showBench, setShowBench] = useState(false);
     const [formation, setFormation] = useState("4-3-3");
+    const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
 
     useEffect(() => {
         if (teamName) fetchSquad();
@@ -139,8 +141,17 @@ export default function TeamLineup({ teamName }: TeamLineupProps) {
     const mids = startingXI.filter(p => p.position === "MID");
     const atts = startingXI.filter(p => p.position === "ATT");
 
+
+
     return (
         <div className="space-y-4">
+            <PlayerStatsModal
+                isOpen={!!selectedPlayer}
+                onClose={() => setSelectedPlayer(null)}
+                playerId={selectedPlayer?.id || 0}
+                playerName={selectedPlayer?.name || ""}
+            />
+
             <div className="flex items-center justify-between">
                 <span className="text-xs text-muted-foreground">Formation</span>
                 <select
@@ -167,25 +178,33 @@ export default function TeamLineup({ teamName }: TeamLineupProps) {
                 <div className="relative z-10 flex flex-col justify-between h-full gap-6">
                     <div className="flex justify-around">
                         {atts.slice(0, config.ATT).map(player => (
-                            <PlayerCard key={player.id} player={player} />
+                            <div key={player.id} onClick={() => setSelectedPlayer(player)} className="cursor-pointer hover:scale-110 transition-transform">
+                                <PlayerCard player={player} />
+                            </div>
                         ))}
                     </div>
 
                     <div className="flex justify-around">
                         {mids.slice(0, config.MID).map(player => (
-                            <PlayerCard key={player.id} player={player} />
+                            <div key={player.id} onClick={() => setSelectedPlayer(player)} className="cursor-pointer hover:scale-110 transition-transform">
+                                <PlayerCard player={player} />
+                            </div>
                         ))}
                     </div>
 
                     <div className="flex justify-around">
                         {defs.slice(0, config.DEF).map(player => (
-                            <PlayerCard key={player.id} player={player} />
+                            <div key={player.id} onClick={() => setSelectedPlayer(player)} className="cursor-pointer hover:scale-110 transition-transform">
+                                <PlayerCard player={player} />
+                            </div>
                         ))}
                     </div>
 
                     <div className="flex justify-center">
                         {gks.slice(0, config.GK).map(player => (
-                            <PlayerCard key={player.id} player={player} />
+                            <div key={player.id} onClick={() => setSelectedPlayer(player)} className="cursor-pointer hover:scale-110 transition-transform">
+                                <PlayerCard player={player} />
+                            </div>
                         ))}
                     </div>
                 </div>
@@ -208,7 +227,9 @@ export default function TeamLineup({ teamName }: TeamLineupProps) {
                     <h4 className="text-sm font-semibold mb-3">Substitutes</h4>
                     <div className="grid grid-cols-4 sm:grid-cols-6 gap-4">
                         {bench.map(player => (
-                            <PlayerCard key={player.id} player={player} />
+                            <div key={player.id} onClick={() => setSelectedPlayer(player)} className="cursor-pointer hover:scale-110 transition-transform">
+                                <PlayerCard player={player} />
+                            </div>
                         ))}
                     </div>
                 </div>

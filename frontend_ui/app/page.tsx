@@ -35,7 +35,7 @@ export default function Home() {
   const [preview, setPreview] = useState<string>("");
   const [loadingPreview, setLoadingPreview] = useState<boolean>(false);
   const [injuryData, setInjuryData] = useState<any>(null);
-  const [loadingInjuries, setLoadingInjuries] = useState(false);
+
   const [showLineup, setShowLineup] = useState(false);
 
   const [homeInjuries, setHomeInjuries] = useState<Injury[]>([]);
@@ -104,24 +104,7 @@ export default function Home() {
     }
   };
 
-  const fetchLiveData = async () => {
-    setLoadingInjuries(true);
-    try {
-      const [homeRes, awayRes] = await Promise.all([
-        axios.get("http://localhost:8000/injuries", { params: { team: home } }),
-        axios.get("http://localhost:8000/injuries", { params: { team: away } })
-      ]);
 
-      setHomeInjuries(homeRes.data.injuries || []);
-      setAwayInjuries(awayRes.data.injuries || []);
-      setHomeRest(homeRes.data.rest_days || 7);
-      setAwayRest(awayRes.data.rest_days || 7);
-    } catch (error) {
-      console.error("Live data error:", error);
-    } finally {
-      setLoadingInjuries(false);
-    }
-  };
 
   return (
     <div className="min-h-screen">
@@ -147,12 +130,7 @@ export default function Home() {
             <p className="text-muted-foreground text-lg">
               Let's see if the AI knows BALL
             </p>
-            <div className="mt-4">
-              <Button onClick={fetchLiveData} className="gap-2">
-                <Sparkles size={16} />
-                Fetch Live Data
-              </Button>
-            </div>
+
           </div>
 
           <HomepageHero />

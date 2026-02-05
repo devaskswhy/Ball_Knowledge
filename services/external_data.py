@@ -43,6 +43,7 @@ def get_injuries(team_id, season=2024):
             continue
 
         injuries.append({
+            "id": str(hash(fi["name"])), # Unique ID based on name
             "name": fi["name"],
             "position": position,
             "impact": 5 # Default impact, user adjusts manually
@@ -337,5 +338,40 @@ def get_team_colors(team_id):
         return {"primary": "#6366f1", "secondary": "#22d3ee"}
         
     except Exception as e:
+        return {"primary": "#6366f1", "secondary": "#22d3ee"}
+        
+    except Exception as e:
         print(f"Team colors error: {e}")
         return {"primary": "#6366f1", "secondary": "#22d3ee"}
+
+def get_player_stats(player_id, season=2024, league_id=39):
+    """Fetch detailed season stats for a player"""
+    if not API_KEY:
+        return None
+        
+    url = f"{BASE_URL}/players"
+    params = {
+        "id": player_id,
+        "season": season,
+        "league": league_id
+    }
+    
+    try:
+        r = requests.get(url, headers=HEADERS, params=params)
+        data = r.json().get("response", [])
+        
+        if not data:
+            return None
+            
+        # Data structure: response[0] -> { player: {...}, statistics: [{...}] }
+        player_data = data[0]
+        stats = player_data["statistics"][0]
+        
+        return {
+            "player": player_data["player"],
+            "statistics": stats
+        }
+        
+    except Exception as e:
+        print(f"Player stats error for {player_id}: {e}")
+        return None
