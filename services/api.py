@@ -5,6 +5,7 @@ import pandas as pd
 import json
 from pathlib import Path
 from services.external_data import get_injuries, role_counts, get_squad, search_team_id, get_featured_fixtures, get_top_players, get_team_colors, get_player_stats
+from services.wc_data import WC_2026_TEAMS, FIFA_RANKINGS
 
 
 # ---------------- APP ----------------
@@ -143,15 +144,38 @@ def get_teams(league: str = "PL"):
         return {"teams": []} # Or raise HTTPException
     
     team_names = sorted(list(ctx["power_lookup"].keys()))
+
+    if league == "WC":
+        # Filter for WC 2026 teams only
+        team_names = [t for t in team_names if t in WC_2026_TEAMS]
+        # Also add any confirmed teams that might be missing from power_lookup but are in our whitelist
+        # (This handles the case where LeagueManager only loaded confirmed historical power data)
+        for t in WC_2026_TEAMS:
+            if t not in team_names and t in TEAM_ID_MAP:
+                 team_names.append(t)
+        team_names = sorted(list(set(team_names))) # Dedupe and sort
+    
+    # Map to objects with IDs for Badges
     
     # Map to objects with IDs for Badges
     teams_data = []
+    
+    # Pre-fetch rankings if WC
     for name in team_names:
         tid = TEAM_ID_MAP.get(name)
-        teams_data.append({
+        t_obj = {
             "name": name,
             "id": tid
-        })
+        }
+        
+        if league == "WC":
+            t_obj["rank"] = FIFA_RANKINGS.get(name, 999)
+            
+        teams_data.append(t_obj)
+        
+    # Sort by rank if World Cup
+    if league == "WC":
+        teams_data.sort(key=lambda x: x.get("rank", 999))
         
     return {"teams": teams_data}
 
@@ -284,6 +308,63 @@ def get_player_stats_endpoint(player_id: int, season: int = 2024, league: int = 
         # Return empty or specific structure to handle "no data" gracefully
         return {"player": {}, "statistics": {}}
     return stats
+
+# ---------------- WC GROUPS ----------------
+@app.get("/wc_groups")
+def get_wc_expected_groups():
+    """Generate Expected World Cup Groups based on FIFA Rankings"""
+    # 1. Gather all WC 2026 teams
+    teams = []
+    
+    # Use IDs from map
+    for name in WC_2026_TEAMS:
+        if name in TEAM_ID_MAP:
+            # Get rank
+            rank = FIFA_RANKINGS.get(name, 100)
+            teams.append({
+                "name": name,
+                "id": TEAM_ID_MAP[name],
+                "rank": rank
+            })
+    
+    # 2. Sort by Rank
+    teams.sort(key=lambda x: x["rank"])
+    
+    # 3. Create Pots (Assuming 48 teams? User implementation shows ~32 for now in example)
+    # We will just distribute them into Groups A-H (8 groups of 4 = 32 teams)
+    # Or however many fit.
+    
+    groups_data = []
+    group_names = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"]
+    
+    # Snake draft or simple alternating? 
+    # Let's do a simple "Seeded" distribution (Pot 1 to Group A-H, Pot 2 to A-H...)
+    
+    num_groups = 8 # Fit 32 teams
+    # If we have more teams, we add more groups
+    if len(teams) > 32:
+        num_groups = 12 # 48 team format (12 groups of 4)
+        
+    # Initialize groups
+    for i in range(num_groups):
+        groups_data.append({
+            "name": f"Group {group_names[i]}",
+            "teams": []
+        })
+        
+    # Distribute
+    # For a realistic draw, we would use Pots.
+    # Pot 1: Top N teams
+    # Pot 2: Next N teams
+    # ...
+    
+    for i, team in enumerate(teams):
+        # Determine group index. 
+        # Simple distribution: 0, 1, 2... 7, 0, 1, 2...
+        group_idx = i % num_groups
+        groups_data[group_idx]["teams"].append(team)
+        
+    return groups_data
 
 # ---------------- LIVE DATA ----------------
 

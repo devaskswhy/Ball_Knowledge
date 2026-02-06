@@ -12,6 +12,8 @@ import TeamLineup from "./components/TeamLineup";
 import HomepageHero from "./components/HomepageHero";
 import { Header } from "./components/Header";
 import { Footer } from "./components/Footer";
+import WorldCupGroups from "./components/WorldCupGroups";
+import FifaRatingsTable from "./components/FifaRatingsTable";
 import { Card, CardHeader, CardTitle, CardContent } from "./components/ui/card";
 import { Button } from "./components/ui/button";
 
@@ -139,6 +141,14 @@ export default function Home() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-8 space-y-8">
+
+        {/* WC Groups - Top for World Cup Mode */}
+        {league === "WC" && (
+          <section id="wc-groups">
+            <WorldCupGroups />
+          </section>
+        )}
+
         {/* Match Predictor */}
         <section id="predictor">
           <Card>
@@ -282,16 +292,25 @@ export default function Home() {
         )}
 
         <div className="text-center">
-          <Button
-            onClick={() => setShowLineup(!showLineup)}
-            variant="outline"
-            disabled={!home || !away}
-            className="border-primary/30 hover:bg-primary/20 hover:text-primary transition-colors"
-          >
-            <Users className="mr-2 h-4 w-4" />
-            {showLineup ? "Hide" : "Show"} Team Lineups
-          </Button>
+          {league !== "WC" && (
+            <Button
+              onClick={() => setShowLineup(!showLineup)}
+              variant="outline"
+              disabled={!home || !away}
+              className="border-primary/30 hover:bg-primary/20 hover:text-primary transition-colors"
+            >
+              <Users className="mr-2 h-4 w-4" />
+              {showLineup ? "Hide" : "Show"} Team Lineups
+            </Button>
+          )}
         </div>
+
+        {/* WC Ratings Table (Visible only in WC mode) */}
+        {league === "WC" && (
+          <section id="wc-ratings" className="pt-8 border-t border-white/10">
+            <FifaRatingsTable />
+          </section>
+        )}
       </main>
 
       <Footer />
