@@ -74,6 +74,11 @@ export default function FifaRatingsTable() {
                                                 alt={team.name}
                                                 fill
                                                 className="object-contain p-1"
+                                                onError={(e) => {
+                                                    const target = e.target as HTMLImageElement;
+                                                    target.style.display = 'none';
+                                                    target.parentElement!.innerHTML = '<span class="flex items-center justify-center w-full h-full text-[10px] text-gray-500">⚽</span>';
+                                                }}
                                             />
                                         </div>
                                         <span className="font-semibold text-gray-200 group-hover:text-white">{team.name}</span>

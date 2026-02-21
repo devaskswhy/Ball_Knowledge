@@ -16,6 +16,7 @@ const LEAGUES = [
     { code: "LL", name: "La Liga" },
     { code: "SA", name: "Serie A" },
     { code: "L1", name: "Ligue 1" },
+    { code: "BL", name: "Bundesliga" },
     { code: "WC", name: "World Cup" },
 ]
 

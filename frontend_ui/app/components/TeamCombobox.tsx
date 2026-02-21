@@ -76,6 +76,10 @@ export default function TeamCombobox({
                             src={getLogoUrl(selectedTeamObj.id)!}
                             alt={selectedTeamObj.name}
                             className="w-6 h-6 object-contain"
+                            onError={(e) => {
+                                e.currentTarget.style.display = "none";
+                                e.currentTarget.parentElement?.insertAdjacentHTML("beforeend", '<span class="text-xs">⚽</span>');
+                            }}
                         />
                     ) : (
                         <div className="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center text-xs text-gray-400 font-bold">
@@ -126,13 +130,20 @@ export default function TeamCombobox({
                                             setQuery("");
                                         }}
                                         className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${selectedTeam === team.name
-                                                ? "bg-blue-600/20 text-blue-400"
-                                                : "text-gray-300 hover:bg-[#1A233A]"
+                                            ? "bg-blue-600/20 text-blue-400"
+                                            : "text-gray-300 hover:bg-[#1A233A]"
                                             }`}
                                     >
                                         {/* Badge */}
                                         {team.id ? (
-                                            <img src={getLogoUrl(team.id)!} loading="lazy" className="w-5 h-5 object-contain" />
+                                            <img
+                                                src={getLogoUrl(team.id)!}
+                                                loading="lazy"
+                                                className="w-5 h-5 object-contain"
+                                                onError={(e) => {
+                                                    e.currentTarget.style.display = "none";
+                                                }}
+                                            />
                                         ) : (
                                             <div className="w-5 h-5 rounded-full bg-gray-700" />
                                         )}

@@ -37,6 +37,7 @@ LEAGUE_FILES = {
     "LL": "SP1.csv",
     "SA": "I1.csv",
     "L1": "F1.csv",
+    "BL": "D1.csv",
     "WC": "international_matches1.csv", 
 }
 
@@ -97,7 +98,31 @@ TEAM_ID_MAP = {
     # Ligue 1
     "PSG": 85,
     "Paris Saint-Germain": 85,
-    
+
+    # Bundesliga (names match D1.csv exactly, with aliases for common variants)
+    "Bayern Munich": 157,
+    "Borussia Dortmund": 165, "Dortmund": 165,
+    "Bayer Leverkusen": 168, "Leverkusen": 168,
+    "RB Leipzig": 173,
+    "Eintracht Frankfurt": 169, "Ein Frankfurt": 169, "Frankfurt": 169,
+    "VfL Wolfsburg": 161, "Wolfsburg": 161,
+    "Borussia Monchengladbach": 163, "M'gladbach": 163, "Gladbach": 163,
+    "SC Freiburg": 160, "Freiburg": 160,
+    "Union Berlin": 182,
+    "VfB Stuttgart": 172, "Stuttgart": 172,
+    "TSG Hoffenheim": 167, "Hoffenheim": 167,
+    "FC Augsburg": 170, "Augsburg": 170,
+    "Mainz": 164, "Mainz 05": 164,
+    "Werder Bremen": 162, "Bremen": 162,
+    "FC Koln": 192, "FC Cologne": 192, "Cologne": 192,
+    "Schalke 04": 174, "Schalke": 174,
+    "Hertha Berlin": 159, "Hertha BSC": 159, "Hertha": 159,
+    "Bochum": 176,
+    "Heidenheim": 811,
+    "Darmstadt": 779,
+    "Hamburg": 180, "HSV": 180,
+    "St Pauli": 186,
+
     # National Teams (World Cup)
     "Argentina": 26,
     "France": 2,

@@ -202,7 +202,7 @@ function PlayerOfWeekCard({ player }: { player: Player }) {
 }
 
 // Main Homepage Hero Section
-export default function HomepageHero() {
+export default function HomepageHero({ showMatches = true, showStats = true }: { showMatches?: boolean, showStats?: boolean }) {
   const [fixtures, setFixtures] = useState<Fixture[]>([]);
   const [topPlayers, setTopPlayers] = useState<Player[]>([]);
   const [playerOfWeek, setPlayerOfWeek] = useState<Player | null>(null);
@@ -232,9 +232,9 @@ export default function HomepageHero() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 text-left">
       {/* Featured Matches */}
-      {fixtures.length > 0 && (
+      {showMatches && fixtures.length > 0 && (
         <section>
           <div className="flex items-center gap-2 mb-4">
             <Zap className="w-5 h-5 text-cyan-400" />
@@ -249,33 +249,35 @@ export default function HomepageHero() {
       )}
 
       {/* Two columns: Top Players + Player of Week */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Top Players */}
-        {topPlayers.length > 0 && (
-          <section>
-            <div className="flex items-center gap-2 mb-4">
-              <TrendingUp className="w-5 h-5 text-green-400" />
-              <h2 className="text-lg font-black text-white uppercase tracking-wider">Impact Players</h2>
-            </div>
-            <div className="space-y-2">
-              {topPlayers.map((p, i) => (
-                <PlayerCard key={p.id} player={p} rank={i + 1} />
-              ))}
-            </div>
-          </section>
-        )}
+      {showStats && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Top Players */}
+          {topPlayers.length > 0 && (
+            <section>
+              <div className="flex items-center gap-2 mb-4">
+                <TrendingUp className="w-5 h-5 text-green-400" />
+                <h2 className="text-lg font-black text-white uppercase tracking-wider">Impact Players</h2>
+              </div>
+              <div className="space-y-2">
+                {topPlayers.map((p, i) => (
+                  <PlayerCard key={p.id} player={p} rank={i + 1} />
+                ))}
+              </div>
+            </section>
+          )}
 
-        {/* Player of the Week */}
-        {playerOfWeek && (
-          <section>
-            <div className="flex items-center gap-2 mb-4">
-              <Star className="w-5 h-5 text-amber-400" />
-              <h2 className="text-lg font-black text-white uppercase tracking-wider">Star Player</h2>
-            </div>
-            <PlayerOfWeekCard player={playerOfWeek} />
-          </section>
-        )}
-      </div>
+          {/* Player of the Week */}
+          {playerOfWeek && (
+            <section>
+              <div className="flex items-center gap-2 mb-4">
+                <Star className="w-5 h-5 text-amber-400" />
+                <h2 className="text-lg font-black text-white uppercase tracking-wider">Star Player</h2>
+              </div>
+              <PlayerOfWeekCard player={playerOfWeek} />
+            </section>
+          )}
+        </div>
+      )}
 
       {/* Empty state */}
       {fixtures.length === 0 && topPlayers.length === 0 && (

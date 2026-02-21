@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { Shield, Star, AlertTriangle, Clock, Sparkles, Users } from "lucide-react";
+import { Shield, Star, AlertTriangle, Clock, Sparkles, Users, Calendar, TrendingUp } from "lucide-react";
 import { motion } from "framer-motion";
 import InjurySelector, { Injury } from "./components/InjurySelector";
 import MatchContext from "./components/MatchContext";
@@ -19,17 +19,31 @@ import { Button } from "./components/ui/button";
 
 // Background Map
 const LEAGUE_BG: Record<string, string> = {
-  PL: "/leagues/pl.png",
-  LL: "/leagues/laliga.png",
+  PL: "/leagues/pl.jpg",
+  LL: "/leagues/laliga.jpg",
   SA: "/leagues/seriea.jpg",
-  L1: "/leagues/ligue1.png",
+  L1: "/leagues/ligue1.jpg",
+  BL: "/leagues/bundesliga.jpg",
   WC: "/leagues/worldcup.jpg",
+};
+
+// League Dynamic Styles
+const LEAGUE_STYLES: Record<string, { heading: string, text: string }> = {
+  PL: { heading: "from-[#38003c] via-[#e90052] to-[#00ff85]", text: "text-purple-200" }, // Premier League colors
+  LL: { heading: "from-[#ee8707] via-[#ff4b4b] to-[#121212]", text: "text-orange-200" }, // La Liga 
+  SA: { heading: "from-[#004d98] via-[#00a1e0] to-[#ffffff]", text: "text-blue-200" }, // Serie A
+  L1: { heading: "from-[#001738] via-[#da291c] to-[#ffffff]", text: "text-gray-200" }, // Ligue 1
+  BL: { heading: "from-[#d1101a] via-[#fc1d25] to-[#ffffff]", text: "text-red-100" }, // Bundesliga
+  WC: { heading: "from-yellow-300 via-yellow-500 to-yellow-700", text: "text-yellow-100" }, // World Cup
 };
 
 export default function Home() {
   const [home, setHome] = useState<string>("Arsenal");
   const [away, setAway] = useState<string>("Liverpool");
   const [league, setLeague] = useState<string>("PL");
+
+  const [showMatches, setShowMatches] = useState(true);
+  const [showStats, setShowStats] = useState(true);
 
   const [result, setResult] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -115,27 +129,50 @@ export default function Home() {
       {/* Hero Section with League Background */}
       <div
         id="hero"
-        className="relative min-h-[500px] flex items-center justify-center"
+        className="relative min-h-[600px] flex items-start justify-center pt-2 pb-12"
         style={{
           backgroundImage: `url(${LEAGUE_BG[league]})`,
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}
       >
-        <div className="absolute inset-0 bg-gradient-to-b from-background/90 via-background/70 to-background" />
+        <div className="absolute inset-0 bg-gradient-to-b from-background/55 via-background/35 to-background" />
 
-        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 py-12">
-          <div className="text-center mb-8">
-            <h1 className="text-5xl md:text-6xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-primary via-accent to-primary">
+        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 flex flex-col justify-between h-full">
+          {/* Top Section - Heading */}
+          <div className="text-center">
+            <h1 className={`text-5xl md:text-7xl font-black mb-4 pb-2 leading-tight bg-clip-text text-transparent bg-gradient-to-r drop-shadow-lg ${LEAGUE_STYLES[league]?.heading || "from-primary via-accent to-primary"}`}>
               {league === "WC" ? "World Cup Mode" : "Ball Knowledge"}
             </h1>
-            <p className="text-muted-foreground text-lg">
+            <p className={`text-lg font-medium drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)] ${LEAGUE_STYLES[league]?.text || "text-muted-foreground"}`}>
               Let's see if the AI knows BALL
             </p>
-
           </div>
 
-          <HomepageHero />
+          <div className="mt-8">
+            {/* View Toggles - Tucked Away */}
+            <div className="flex justify-center md:justify-end gap-2 mb-4">
+              <Button
+                variant={showMatches ? "default" : "secondary"}
+                onClick={() => setShowMatches(!showMatches)}
+                size="sm"
+                className={`rounded-full shadow-lg border border-white/10 transition-all duration-300 font-bold ${showMatches ? 'bg-white/20 hover:bg-white/30 text-white backdrop-blur-md' : 'bg-black/50 hover:bg-black/70 text-gray-300 backdrop-blur-sm'}`}
+              >
+                <Calendar className="w-4 h-4 mr-2" />
+                Today's Matches
+              </Button>
+              <Button
+                variant={showStats ? "default" : "secondary"}
+                onClick={() => setShowStats(!showStats)}
+                size="sm"
+                className={`rounded-full shadow-lg border border-white/10 transition-all duration-300 font-bold ${showStats ? 'bg-white/20 hover:bg-white/30 text-white backdrop-blur-md' : 'bg-black/50 hover:bg-black/70 text-gray-300 backdrop-blur-sm'}`}
+              >
+                <TrendingUp className="w-4 h-4 mr-2" />
+                Impact Players
+              </Button>
+            </div>
+            <HomepageHero showMatches={showMatches} showStats={showStats} />
+          </div>
         </div>
       </div>
 

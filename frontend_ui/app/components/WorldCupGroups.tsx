@@ -80,6 +80,12 @@ export default function WorldCupGroups() {
                                             alt={team.name}
                                             fill
                                             className="object-contain p-0.5"
+                                            onError={(e) => {
+                                                // Fallback to a generic icon or hide
+                                                const target = e.target as HTMLImageElement;
+                                                target.style.display = 'none';
+                                                target.parentElement!.innerHTML = '<span class="flex items-center justify-center w-full h-full text-[10px] text-gray-500">⚽</span>';
+                                            }}
                                         />
                                     </div>
                                     <span className="text-sm font-medium text-gray-200 group-hover:text-white truncate">
