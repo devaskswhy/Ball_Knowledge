@@ -110,7 +110,7 @@ function PlayerCard({ player, rank }: { player: Player; rank: number }) {
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: rank * 0.1 }}
-      className="flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 hover:border-cyan-500/30 transition-all group"
+      className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a] border border-white/10 hover:border-cyan-500/30 transition-all duration-300 group shadow-lg"
     >
       <div className="relative">
         <span className="absolute -top-1 -left-1 w-5 h-5 rounded-full bg-gradient-to-br from-cyan-500 to-purple-500 flex items-center justify-center text-[10px] font-bold text-white z-10">
@@ -149,8 +149,10 @@ function PlayerOfWeekCard({ player }: { player: Player }) {
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-500/20 via-[#1e293b] to-purple-500/20 border border-amber-500/30 p-6"
+      className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a] border border-amber-500/30 p-6 shadow-xl"
     >
+      {/* Subtle ambient glow behind the card content */}
+      <div className="absolute -top-20 -right-20 w-40 h-40 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
       {/* Crown/Trophy */}
       <div className="absolute top-4 right-4">
         <Trophy className="w-8 h-8 text-amber-400" />
