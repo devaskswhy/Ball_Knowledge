@@ -6,7 +6,7 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import { Trophy, Star, TrendingUp, Zap, Calendar, ChevronRight } from "lucide-react";
 
-interface Fixture {
+export interface Fixture {
   id: number;
   date: string;
   status: string;
@@ -29,14 +29,15 @@ interface Player {
 }
 
 // Featured Match Card
-function FeaturedMatchCard({ fixture }: { fixture: Fixture }) {
+function FeaturedMatchCard({ fixture, onClick }: { fixture: Fixture; onClick?: () => void }) {
   const matchTime = new Date(fixture.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a] border border-white/10 p-6 group hover:border-cyan-500/30 transition-all duration-300"
+      onClick={onClick}
+      className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a] border border-white/10 p-6 group hover:border-cyan-500/30 transition-all duration-300 cursor-pointer hover:scale-[1.02]"
     >
       {/* Glowing orb effect */}
       <div className="absolute -top-20 -right-20 w-40 h-40 bg-cyan-500/20 rounded-full blur-3xl group-hover:bg-cyan-500/30 transition-all" />
@@ -204,7 +205,7 @@ function PlayerOfWeekCard({ player }: { player: Player }) {
 }
 
 // Main Homepage Hero Section
-export default function HomepageHero({ showMatches = true, showStats = true }: { showMatches?: boolean, showStats?: boolean }) {
+export default function HomepageHero({ showMatches = true, showStats = true, onFixtureClick }: { showMatches?: boolean, showStats?: boolean, onFixtureClick?: (fixture: Fixture) => void }) {
   const [fixtures, setFixtures] = useState<Fixture[]>([]);
   const [topPlayers, setTopPlayers] = useState<Player[]>([]);
   const [playerOfWeek, setPlayerOfWeek] = useState<Player | null>(null);
@@ -244,7 +245,7 @@ export default function HomepageHero({ showMatches = true, showStats = true }: {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {fixtures.map((f) => (
-              <FeaturedMatchCard key={f.id} fixture={f} />
+              <FeaturedMatchCard key={f.id} fixture={f} onClick={() => onFixtureClick?.(f)} />
             ))}
           </div>
         </section>

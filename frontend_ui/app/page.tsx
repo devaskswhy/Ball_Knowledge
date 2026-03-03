@@ -10,10 +10,13 @@ import TeamCombobox from "./components/TeamCombobox";
 import LineupBuilder from "./components/LineupBuilder";
 import TeamLineup from "./components/TeamLineup";
 import HomepageHero from "./components/HomepageHero";
+import { Fixture } from "./components/HomepageHero";
 import { Header } from "./components/Header";
 import { Footer } from "./components/Footer";
 import WorldCupGroups from "./components/WorldCupGroups";
 import FifaRatingsTable from "./components/FifaRatingsTable";
+import MatchAnalyticsPanel from "./components/MatchAnalyticsPanel";
+import PlayerAnalytics from "./components/PlayerAnalytics";
 import { Card, CardHeader, CardTitle, CardContent } from "./components/ui/card";
 import { Button } from "./components/ui/button";
 
@@ -61,6 +64,7 @@ export default function Home() {
   const [awayRest, setAwayRest] = useState<number>(7);
 
   const [teams, setTeams] = useState<{ name: string, id: number | null }[]>([]);
+  const [selectedFixture, setSelectedFixture] = useState<Fixture | null>(null);
 
   // Fetch teams when league changes
   useEffect(() => {
@@ -171,7 +175,7 @@ export default function Home() {
                 Impact Players
               </Button>
             </div>
-            <HomepageHero showMatches={showMatches} showStats={showStats} />
+            <HomepageHero showMatches={showMatches} showStats={showStats} onFixtureClick={(f) => setSelectedFixture(f)} />
           </div>
         </div>
       </div>
@@ -342,6 +346,13 @@ export default function Home() {
           )}
         </div>
 
+        {/* Player Analytics Section */}
+        {league !== "WC" && teams.length > 0 && (
+          <section id="analytics">
+            <PlayerAnalytics teams={teams} selectedTeam={home} />
+          </section>
+        )}
+
         {/* WC Ratings Table (Visible only in WC mode) */}
         {league === "WC" && (
           <section id="wc-ratings" className="pt-8 border-t border-white/10">
@@ -351,6 +362,12 @@ export default function Home() {
       </main>
 
       <Footer />
+
+      {/* Match Analytics Slide-Over Panel */}
+      <MatchAnalyticsPanel
+        fixture={selectedFixture}
+        onClose={() => setSelectedFixture(null)}
+      />
     </div>
   );
 }
