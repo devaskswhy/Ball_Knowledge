@@ -20,14 +20,14 @@ import PlayerAnalytics from "./components/PlayerAnalytics";
 import { Card, CardHeader, CardTitle, CardContent } from "./components/ui/card";
 import { Button } from "./components/ui/button";
 
-// Background Map
+// TODO: Replace gradient with real image from /public/leagues/
 const LEAGUE_BG: Record<string, string> = {
-  PL: "/leagues/pl.jpg",
-  LL: "/leagues/laliga.jpg",
-  SA: "/leagues/seriea.jpg",
-  L1: "/leagues/ligue1.jpg",
-  BL: "/leagues/bundesliga.jpg",
-  WC: "/leagues/worldcup.jpg",
+  PL: "linear-gradient(135deg, #2b0030 0%, #080f26 100%)", // Premier League: deep purple-to-dark-navy
+  LL: "linear-gradient(135deg, #7a0909 0%, #290000 100%)", // La Liga: deep red-to-dark-maroon
+  SA: "linear-gradient(135deg, #0b1a30 0%, #000000 100%)", // Serie A: dark navy-to-black
+  L1: "linear-gradient(135deg, #0a1f44 0%, #004d4d 100%)", // Ligue 1: dark blue-to-deep-teal
+  BL: "linear-gradient(135deg, #2c2c2c 0%, #111111 100%)", // Bundesliga: dark grey-to-charcoal
+  WC: "linear-gradient(135deg, #856a00 0%, #2b3b00 100%)", // World Cup: deep gold-to-dark-olive
 };
 
 // League Dynamic Styles
@@ -135,7 +135,7 @@ export default function Home() {
         id="hero"
         className="relative min-h-[600px] flex items-start justify-center pt-2 pb-12"
         style={{
-          backgroundImage: `url(${LEAGUE_BG[league]})`,
+          backgroundImage: LEAGUE_BG[league],
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}
