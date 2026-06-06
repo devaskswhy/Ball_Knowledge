@@ -3,7 +3,9 @@ import requests
 from dotenv import load_dotenv
 
 load_dotenv()
-API_KEY = os.getenv("API_FOOTBALL_KEY") or "317800f2e0db88981b54a22857699974"
+API_KEY = os.getenv("API_FOOTBALL_KEY")
+if not API_KEY:
+    raise RuntimeError("API_FOOTBALL_KEY is not set. Add it to your .env file.")
 
 HEADERS = {
     "x-apisports-key": API_KEY,
