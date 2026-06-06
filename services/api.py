@@ -29,7 +29,7 @@ from models.preview import generate_match_preview
 # ---------------- DATA LOAD ----------------
 league_manager = LeagueManager()
 
-DATA_DIR = Path(r"C:\WEB_PROJECTS\Ball_Knowledge\data")
+DATA_DIR = Path(__file__).parent.parent / "data"
 
 # Define Leagues and their CSV paths
 LEAGUE_FILES = {
