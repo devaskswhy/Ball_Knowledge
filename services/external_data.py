@@ -1,5 +1,5 @@
 import os
-import requests
+import httpx
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -13,7 +13,10 @@ HEADERS = {
 }
 BASE_URL = "https://v3.football.api-sports.io"
 
-def get_injuries(team_id, season=2024):
+# Shared async HTTP client with timeout
+http_client = httpx.AsyncClient(timeout=10.0)
+
+async def get_injuries(team_id, season=2024):
     if not API_KEY:
         print("Warning: No API Key found.")
         return []
@@ -22,7 +25,7 @@ def get_injuries(team_id, season=2024):
     params = {"team": team_id, "season": season}
 
     try:
-        r = requests.get(url, headers=HEADERS, params=params)
+        r = await http_client.get(url, headers=HEADERS, params=params)
         data = r.json().get("response", [])
     except Exception as e:
         print(f"Error fetching injuries for {team_id}: {e}")
@@ -53,7 +56,7 @@ def get_injuries(team_id, season=2024):
     
     return injuries[:8] # Limit to 8 to avoid clutter
 
-def get_last_match_date(team_id, season=2024):
+async def get_last_match_date(team_id, season=2024):
     if not API_KEY:
         return None
 
@@ -67,7 +70,7 @@ def get_last_match_date(team_id, season=2024):
     }
 
     try:
-        r = requests.get(url, headers=HEADERS, params=params)
+        r = await http_client.get(url, headers=HEADERS, params=params)
         data = r.json().get("response", [])
         if data:
             # Format: 2024-04-20T14:00:00+00:00
@@ -83,7 +86,7 @@ def role_counts(injuries):
             roles[p["position"]] += 1
     return roles
 
-def search_team_id(team_name):
+async def search_team_id(team_name):
     if not API_KEY: 
         return None
     
@@ -91,7 +94,7 @@ def search_team_id(team_name):
     params = {"search": team_name}
     
     try:
-        r = requests.get(url, headers=HEADERS, params=params)
+        r = await http_client.get(url, headers=HEADERS, params=params)
         data = r.json().get("response", [])
         if data:
             return data[0]["team"]["id"]
@@ -99,7 +102,7 @@ def search_team_id(team_name):
         print(f"Search error for {team_name}: {e}")
     return None
 
-def get_lineup(team_id, season=2024):
+async def get_lineup(team_id, season=2024):
     if not API_KEY:
         return []
 
@@ -112,7 +115,7 @@ def get_lineup(team_id, season=2024):
     }
     
     try:
-        r = requests.get(url_fixtures, headers=HEADERS, params=params_fixtures)
+        r = await http_client.get(url_fixtures, headers=HEADERS, params=params_fixtures)
         data = r.json().get("response", [])
         if not data:
             return []
@@ -123,7 +126,7 @@ def get_lineup(team_id, season=2024):
         url_lineup = f"{BASE_URL}/fixtures/lineups"
         params_lineup = {"fixture": fixture_id, "team": team_id}
         
-        r_l = requests.get(url_lineup, headers=HEADERS, params=params_lineup)
+        r_l = await http_client.get(url_lineup, headers=HEADERS, params=params_lineup)
         data_l = r_l.json().get("response", [])
         
         if not data_l:
@@ -149,7 +152,7 @@ def get_lineup(team_id, season=2024):
         print(f"Lineup fetch error for {team_id}: {e}")
         return []
 
-def get_squad(team_id):
+async def get_squad(team_id):
     """Fetch full squad roster with player photos and details"""
     if not API_KEY:
         return []
@@ -158,7 +161,7 @@ def get_squad(team_id):
     params = {"team": team_id}
     
     try:
-        r = requests.get(url, headers=HEADERS, params=params)
+        r = await http_client.get(url, headers=HEADERS, params=params)
         data = r.json().get("response", [])
         
         if not data:
@@ -205,7 +208,7 @@ def get_squad(team_id):
         return []
 
 
-def get_featured_fixtures():
+async def get_featured_fixtures():
     """Get today's top fixtures from top 5 leagues"""
     if not API_KEY:
         return []
@@ -219,7 +222,7 @@ def get_featured_fixtures():
     try:
         url = f"{BASE_URL}/fixtures"
         params = {"date": today}
-        r = requests.get(url, headers=HEADERS, params=params)
+        r = await http_client.get(url, headers=HEADERS, params=params)
         data = r.json().get("response", [])
         
         featured = []
@@ -257,7 +260,7 @@ def get_featured_fixtures():
         return []
 
 
-def get_top_players(season=2024):
+async def get_top_players(season=2024):
     """Get top impact players across all major leagues based on rating and performance"""
     if not API_KEY:
         return []
@@ -271,7 +274,7 @@ def get_top_players(season=2024):
         
         for league_id in top_leagues:
             params = {"league": league_id, "season": season}
-            r = requests.get(url, headers=HEADERS, params=params)
+            r = await http_client.get(url, headers=HEADERS, params=params)
             data = r.json().get("response", [])
             
             for p in data[:3]:  # Top 3 from each league
@@ -316,7 +319,7 @@ def get_top_players(season=2024):
         return []
 
 
-def get_team_colors(team_id):
+async def get_team_colors(team_id):
     """Get team primary and secondary colors"""
     if not API_KEY:
         return {"primary": "#6366f1", "secondary": "#22d3ee"}
@@ -324,7 +327,7 @@ def get_team_colors(team_id):
     try:
         url = f"{BASE_URL}/teams"
         params = {"id": team_id}
-        r = requests.get(url, headers=HEADERS, params=params)
+        r = await http_client.get(url, headers=HEADERS, params=params)
         data = r.json().get("response", [])
         
         if data:
@@ -343,7 +346,7 @@ def get_team_colors(team_id):
         print(f"Team colors error: {e}")
         return {"primary": "#6366f1", "secondary": "#22d3ee"}
 
-def get_player_stats(player_id, season=2024, league_id=39):
+async def get_player_stats(player_id, season=2024, league_id=39):
     """Fetch detailed season stats for a player"""
     if not API_KEY:
         return None
@@ -356,7 +359,7 @@ def get_player_stats(player_id, season=2024, league_id=39):
     }
     
     try:
-        r = requests.get(url, headers=HEADERS, params=params)
+        r = await http_client.get(url, headers=HEADERS, params=params)
         data = r.json().get("response", [])
         
         if not data:

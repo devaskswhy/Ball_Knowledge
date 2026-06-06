@@ -212,7 +212,7 @@ def get_teams(league: str = "PL"):
     return {"teams": teams_data}
 
 @app.get("/squad")
-def get_team_squad(team: str):
+async def get_team_squad(team: str):
     """Get full squad roster with player photos and ratings, plus real lineup"""
     from services.external_data import get_lineup
     
@@ -221,29 +221,29 @@ def get_team_squad(team: str):
     
     if not team_id:
         # Try searching API
-        team_id = search_team_id(team)
+        team_id = await search_team_id(team)
         if team_id:
             TEAM_ID_MAP[team] = team_id  # Cache for future
     
     if not team_id:
         raise HTTPException(status_code=404, detail=f"Team '{team}' not found")
     
-    squad = get_squad(team_id)
+    squad = await get_squad(team_id)
     
     if not squad:
         raise HTTPException(status_code=404, detail=f"No squad data available for '{team}'")
     
     # Get actual lineup from last match
-    lineup = get_lineup(team_id)
+    lineup = await get_lineup(team_id)
     lineup_ids = [int(p["id"]) for p in lineup] if lineup else []
     
     return {"team": team, "squad": squad, "lineup_ids": lineup_ids}
 
 @app.get("/homepage")
-def get_homepage_data():
+async def get_homepage_data():
     """Get data for the homepage: featured fixtures, top players"""
-    fixtures = get_featured_fixtures()
-    top_players = get_top_players(season=2024)  # Fetch from all major leagues
+    fixtures = await get_featured_fixtures()
+    top_players = await get_top_players(season=2024)  # Fetch from all major leagues
     
     # Get player of the week (top scorer with best stats)
     player_of_week = top_players[0] if top_players else None
@@ -318,12 +318,12 @@ def get_power_table(league: str = "PL"):
     return ctx["power_table"].to_dict(orient="records")
 # ---------------- AUTO INJURIES ----------------
 @app.get("/auto_injuries")
-def auto_injuries(team: str):
+async def auto_injuries(team: str):
     if team not in TEAM_ID_MAP:
         raise HTTPException(status_code=400, detail="Team not mapped yet")
 
     team_id = TEAM_ID_MAP[team]
-    injuries = get_injuries(team_id)
+    injuries = await get_injuries(team_id)
     roles = role_counts(injuries)
 
     return {
@@ -333,9 +333,9 @@ def auto_injuries(team: str):
     }
 
 @app.get("/player_stats")
-def get_player_stats_endpoint(player_id: int, season: int = 2024, league: int = 39):
+async def get_player_stats_endpoint(player_id: int, season: int = 2024, league: int = 39):
     """Get detailed player stats for a specific season and league"""
-    stats = get_player_stats(player_id, season, league)
+    stats = await get_player_stats(player_id, season, league)
     if not stats:
         # Return empty or specific structure to handle "no data" gracefully
         return {"player": {}, "statistics": {}}
