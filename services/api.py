@@ -1,6 +1,7 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from contextlib import asynccontextmanager
 import pandas as pd
 import json
 from pathlib import Path
@@ -9,10 +10,26 @@ from services.wc_data import WC_2026_TEAMS, FIFA_RANKINGS
 from services.cache import cache
 from services.database import get_db, Base, engine
 from services.models import Match, Prediction, Team, Player
+from services.scheduler import setup_scheduler, get_scheduler_status
+
+
+# ---------------- LIFESPAN CONTEXT MANAGER ----------------
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    print("\n--- Starting BallKnowledge API ---")
+    scheduler = setup_scheduler()
+    scheduler.start()
+    print("--- Scheduler started ---")
+    yield
+    # Shutdown
+    print("\n--- Shutting down BallKnowledge API ---")
+    scheduler.shutdown()
+    print("--- Scheduler stopped ---")
 
 
 # ---------------- APP ----------------
-app = FastAPI(title="BallKnowledge API", version="0.1")
+app = FastAPI(title="BallKnowledge API", version="0.1", lifespan=lifespan)
 
 print("\n--- API FILE LOADED FROM:", __file__, "---\n")
 
@@ -421,6 +438,12 @@ def get_wc_expected_groups():
 def get_cache_stats():
     """Get cache statistics and current contents for debugging"""
     return cache.get_stats()
+
+# ---------------- SCHEDULER STATUS ----------------
+@app.get("/scheduler/status")
+def get_scheduler_status_endpoint():
+    """Get scheduler status showing job next run times and last run times"""
+    return get_scheduler_status()
 
 # ---------------- LIVE DATA ----------------
 
