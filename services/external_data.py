@@ -1,6 +1,7 @@
 import os
 import httpx
 from dotenv import load_dotenv
+from services.cache import cache
 
 load_dotenv()
 API_KEY = os.getenv("API_FOOTBALL_KEY")
@@ -20,6 +21,12 @@ async def get_injuries(team_id, season=2024):
     if not API_KEY:
         print("Warning: No API Key found.")
         return []
+    
+    # Check cache first (2 hours TTL)
+    cache_key = f"injuries:{team_id}:{season}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
         
     url = f"{BASE_URL}/injuries"
     params = {"team": team_id, "season": season}
@@ -54,7 +61,9 @@ async def get_injuries(team_id, season=2024):
             "impact": 5 # Default impact, user adjusts manually
         })
     
-    return injuries[:8] # Limit to 8 to avoid clutter
+    result = injuries[:8] # Limit to 8 to avoid clutter
+    cache.set(cache_key, result, ttl_seconds=7200)  # 2 hours
+    return result
 
 async def get_last_match_date(team_id, season=2024):
     if not API_KEY:
@@ -157,6 +166,12 @@ async def get_squad(team_id):
     if not API_KEY:
         return []
     
+    # Check cache first (6 hours TTL)
+    cache_key = f"squad:{team_id}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+    
     url = f"{BASE_URL}/players/squads"
     params = {"team": team_id}
     
@@ -201,6 +216,7 @@ async def get_squad(team_id):
                 "rating": rating
             })
         
+        cache.set(cache_key, squad, ttl_seconds=21600)  # 6 hours
         return squad
         
     except Exception as e:
@@ -215,6 +231,12 @@ async def get_featured_fixtures():
     
     from datetime import datetime
     today = datetime.now().strftime("%Y-%m-%d")
+    
+    # Check cache first (30 minutes TTL)
+    cache_key = f"fixtures:{today}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
     
     # Top 5 league IDs: PL=39, La Liga=140, Serie A=135, Bundesliga=78, Ligue 1=61
     top_leagues = [39, 140, 135, 78, 61]
@@ -253,7 +275,9 @@ async def get_featured_fixtures():
                     }
                 })
         
-        return featured[:5]  # Return top 5 matches
+        result = featured[:5]  # Return top 5 matches
+        cache.set(cache_key, result, ttl_seconds=1800)  # 30 minutes
+        return result
         
     except Exception as e:
         print(f"Featured fixtures error: {e}")
@@ -264,6 +288,12 @@ async def get_top_players(season=2024):
     """Get top impact players across all major leagues based on rating and performance"""
     if not API_KEY:
         return []
+    
+    # Check cache first (24 hours TTL)
+    cache_key = f"top_players:{season}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
     
     # Top 5 league IDs: PL=39, La Liga=140, Serie A=135, Bundesliga=78, Ligue 1=61
     top_leagues = [39, 140, 135, 78, 61]
@@ -309,8 +339,9 @@ async def get_top_players(season=2024):
         
         all_players.sort(key=sort_key, reverse=True)
         
-        # Return top 5 players overall
-        return all_players[:5]
+        result = all_players[:5]  # Return top 5 players overall
+        cache.set(cache_key, result, ttl_seconds=86400)  # 24 hours
+        return result
         
     except Exception as e:
         print(f"Top players error: {e}")
@@ -324,6 +355,12 @@ async def get_team_colors(team_id):
     if not API_KEY:
         return {"primary": "#6366f1", "secondary": "#22d3ee"}
     
+    # Check cache first (7 days TTL)
+    cache_key = f"team_colors:{team_id}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+    
     try:
         url = f"{BASE_URL}/teams"
         params = {"id": team_id}
@@ -334,13 +371,17 @@ async def get_team_colors(team_id):
             team = data[0].get("team", {})
             # API doesn't provide colors directly, so we'll use logo color extraction or defaults
             # For now return based on team name patterns
-            return {
+            result = {
                 "primary": "#6366f1",  # Default indigo
                 "secondary": "#22d3ee",  # Default cyan
                 "logo": team.get("logo")
             }
+            cache.set(cache_key, result, ttl_seconds=604800)  # 7 days
+            return result
         
-        return {"primary": "#6366f1", "secondary": "#22d3ee"}
+        result = {"primary": "#6366f1", "secondary": "#22d3ee"}
+        cache.set(cache_key, result, ttl_seconds=604800)  # 7 days
+        return result
         
     except Exception as e:
         print(f"Team colors error: {e}")

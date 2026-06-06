@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 from services.external_data import get_injuries, role_counts, get_squad, search_team_id, get_featured_fixtures, get_top_players, get_team_colors, get_player_stats
 from services.wc_data import WC_2026_TEAMS, FIFA_RANKINGS
+from services.cache import cache
 
 
 # ---------------- APP ----------------
@@ -397,6 +398,12 @@ def get_wc_expected_groups():
         groups_data[group_idx]["teams"].append(team)
         
     return groups_data
+
+# ---------------- CACHE STATS ----------------
+@app.get("/cache/stats")
+def get_cache_stats():
+    """Get cache statistics and current contents for debugging"""
+    return cache.get_stats()
 
 # ---------------- LIVE DATA ----------------
 
