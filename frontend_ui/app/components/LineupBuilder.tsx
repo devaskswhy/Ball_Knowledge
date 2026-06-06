@@ -17,6 +17,7 @@ import {
 } from "@dnd-kit/core";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { FORMATIONS } from "@/app/lib/formations";
 
 interface Player {
     id: number;
@@ -33,16 +34,6 @@ interface LineupBuilderProps {
     isOpen: boolean;
     onClose: () => void;
 }
-
-// Formation definitions
-const FORMATIONS: Record<string, { GK: number; DEF: number; MID: number; ATT: number }> = {
-    "4-3-3": { GK: 1, DEF: 4, MID: 3, ATT: 3 },
-    "4-4-2": { GK: 1, DEF: 4, MID: 4, ATT: 2 },
-    "4-2-3-1": { GK: 1, DEF: 4, MID: 5, ATT: 1 },
-    "3-5-2": { GK: 1, DEF: 3, MID: 5, ATT: 2 },
-    "5-3-2": { GK: 1, DEF: 5, MID: 3, ATT: 2 },
-    "5-4-1": { GK: 1, DEF: 5, MID: 4, ATT: 1 },
-};
 
 // Draggable Player Card
 function DraggablePlayer({ player, isOnPitch }: { player: Player; isOnPitch?: boolean }) {
@@ -153,9 +144,53 @@ export default function LineupBuilder({ team, isOpen, onClose }: LineupBuilderPr
     const handleFormationChange = (newFormation: string) => {
         setFormation(newFormation);
         setShowFormationPicker(false);
-        // Re-initialize but keep current player assignments if possible
+        
         const config = FORMATIONS[newFormation];
-        // Just display differently - don't change players
+        const allPlayers = [...startingXI, ...bench];
+        
+        // Separate players by position
+        const gks = allPlayers.filter(p => p.position === "GK");
+        const defs = allPlayers.filter(p => p.position === "DEF");
+        const mids = allPlayers.filter(p => p.position === "MID");
+        const atts = allPlayers.filter(p => p.position === "ATT");
+        
+        // Build new XI based on formation requirements
+        const newXI: Player[] = [];
+        
+        // Add goalkeepers
+        for (let i = 0; i < config.GK && i < gks.length; i++) {
+            newXI.push(gks[i]);
+        }
+        
+        // Add defenders
+        for (let i = 0; i < config.DEF && i < defs.length; i++) {
+            newXI.push(defs[i]);
+        }
+        
+        // Add midfielders
+        for (let i = 0; i < config.MID && i < mids.length; i++) {
+            newXI.push(mids[i]);
+        }
+        
+        // Add attackers
+        for (let i = 0; i < config.ATT && i < atts.length; i++) {
+            newXI.push(atts[i]);
+        }
+        
+        // If we don't have enough players, fill with any available players
+        if (newXI.length < 11) {
+            const usedIds = new Set(newXI.map(p => p.id));
+            const remaining = allPlayers.filter(p => !usedIds.has(p.id));
+            for (let i = 0; i < remaining.length && newXI.length < 11; i++) {
+                newXI.push(remaining[i]);
+            }
+        }
+        
+        // Update bench with players not in new XI
+        const newBench = allPlayers.filter(p => !newXI.includes(p));
+        
+        setStartingXI(newXI);
+        setBench(newBench);
     };
 
     const handleDragStart = (event: DragStartEvent) => {

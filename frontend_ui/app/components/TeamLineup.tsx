@@ -6,6 +6,7 @@ import Image from "next/image";
 import { Users, Loader2 } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
 import PlayerStatsModal from "./PlayerStatsModal";
+import { FORMATIONS } from "@/app/lib/formations";
 
 interface Player {
     id: number;
@@ -20,13 +21,6 @@ interface Player {
 interface TeamLineupProps {
     teamName: string;
 }
-
-const FORMATIONS: Record<string, { GK: number; DEF: number; MID: number; ATT: number }> = {
-    "4-3-3": { GK: 1, DEF: 4, MID: 3, ATT: 3 },
-    "4-4-2": { GK: 1, DEF: 4, MID: 4, ATT: 2 },
-    "4-2-3-1": { GK: 1, DEF: 4, MID: 5, ATT: 1 },
-    "3-5-2": { GK: 1, DEF: 3, MID: 5, ATT: 2 },
-};
 
 export default function TeamLineup({ teamName }: TeamLineupProps) {
     const [squad, setSquad] = useState<Player[]>([]);
