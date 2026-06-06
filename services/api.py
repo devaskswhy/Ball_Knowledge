@@ -11,7 +11,7 @@ from services.wc_data import WC_2026_TEAMS, FIFA_RANKINGS
 # ---------------- APP ----------------
 app = FastAPI(title="BallKnowledge API", version="0.1")
 
-print("\n🔥🔥 API FILE LOADED FROM:", __file__, "🔥🔥\n")
+print("\n--- API FILE LOADED FROM:", __file__, "---\n")
 
 # ---------------- CORS ----------------
 app.add_middleware(
@@ -50,7 +50,7 @@ for code, filename in LEAGUE_FILES.items():
     if path.exists():
         league_manager.load_league(code, path)
     else:
-        print(f"⚠️ Placeholder: {code} data not found at {path}. (Upload data to enable)")
+        print(f"    Placeholder: {code} data not found at {path}. (Upload data to enable)")
         # Fallback for Demo: Load PL data for other leagues if missing, JUST FOR DEMO purposes
         # so the UI doesn't crash if the user selects them.
         # REMOVE THIS IN PRODUCTION

@@ -11,7 +11,7 @@ class LeagueManager:
         print(f"Loading League: {league_code} from {csv_path}...")
         path = Path(csv_path)
         if not path.exists():
-            print(f"⚠️ CSV NOT FOUND: {csv_path} (Skipping)")
+            print(f"[!] CSV NOT FOUND: {csv_path} (Skipping)")
             return
 
         try:
@@ -49,7 +49,7 @@ class LeagueManager:
         # Validate required columns exist
         required = ["date", "home", "away", "home_goals", "away_goals"]
         if not all(c in df.columns for c in required):
-            print(f"⚠️ Missing columns in {csv_path}. Found: {df.columns.tolist()}")
+            print(f"[!] Missing columns in {csv_path}. Found: {df.columns.tolist()}")
             return
 
         # ---------------- DATE PARSING ----------------
@@ -70,7 +70,7 @@ class LeagueManager:
         df = df.sort_values("date").reset_index(drop=True)
 
         if df.empty:
-            print(f"⚠️ League {league_code} has no valid data after processing (Check Date formats).")
+            print(f"[!] League {league_code} has no valid data after processing (Check Date formats).")
             return
 
         # ---------------- FILTERING ----------------
@@ -92,7 +92,7 @@ class LeagueManager:
         final_stats = self._compute_stats(df)
         
         if final_stats.empty:
-             print(f"⚠️ League {league_code}: Could not compute stats (Not enough matches?).")
+             print(f"[!] League {league_code}: Could not compute stats (Not enough matches?).")
              return
 
         # Merge
@@ -137,7 +137,7 @@ class LeagueManager:
             "elo_df": elo_df,
             "final_stats": final_stats
         }
-        print(f"✅ League {league_code} loaded. {len(power_lookup)} teams.")
+        print(f"[OK] League {league_code} loaded. {len(power_lookup)} teams.")
 
     def _compute_stats(self, df):
         # Helper to compute rolling stats (moved from api.py)

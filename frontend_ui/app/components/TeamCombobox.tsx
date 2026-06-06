@@ -65,6 +65,7 @@ export default function TeamCombobox({
 
             {/* TRIGGER BUTTON */}
             <button
+                suppressHydrationWarning
                 onClick={() => !disabled && setOpen(!open)}
                 className={`w-full flex items-center justify-between bg-[#111829] border ${open ? "border-blue-500 ring-1 ring-blue-500" : "border-[#1F2A44]"
                     } rounded-xl px-4 py-3 text-left transition-all hover:bg-[#1A233A] ${disabled ? "opacity-50 cursor-not-allowed" : ""

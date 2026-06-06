@@ -65,6 +65,7 @@ export default function InjurySelector({
               </p>
             </div>
             <button
+              suppressHydrationWarning
               onClick={() => removeInjury(inj.id)}
               className="text-red-400 hover:bg-red-900/20 p-1.5 rounded-md transition"
             >
@@ -77,6 +78,7 @@ export default function InjurySelector({
       {/* ADD FORM */}
       <div className="bg-[#0D1324] p-3 rounded-lg border border-[#1F2A44] space-y-3">
         <input
+          suppressHydrationWarning
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Player Name"
@@ -85,6 +87,7 @@ export default function InjurySelector({
 
         <div className="flex gap-2">
           <select
+            suppressHydrationWarning
             value={position}
             onChange={(e) => setPosition(e.target.value as any)}
             className="bg-[#1A233A] text-sm text-white p-2 rounded border border-gray-700 flex-1"
@@ -109,6 +112,7 @@ export default function InjurySelector({
         </div>
 
         <button
+          suppressHydrationWarning
           onClick={addInjury}
           className="w-full bg-[#1F2A44] hover:bg-[#2A3A66] text-white text-sm py-2 rounded-lg flex items-center justify-center gap-2 transition"
         >
