@@ -303,8 +303,8 @@ export default function HomepageHero({ showMatches = true, showStats = true, onF
         reconnectTimer = setTimeout(connectWebSocket, 5000);
       };
 
-      ws.onerror = (error) => {
-        console.error("WebSocket error:", error);
+      ws.onerror = () => {
+        console.error("WebSocket connection error - will attempt reconnection");
       };
     };
 
