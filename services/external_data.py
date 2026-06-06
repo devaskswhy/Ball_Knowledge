@@ -340,9 +340,6 @@ def get_team_colors(team_id):
         return {"primary": "#6366f1", "secondary": "#22d3ee"}
         
     except Exception as e:
-        return {"primary": "#6366f1", "secondary": "#22d3ee"}
-        
-    except Exception as e:
         print(f"Team colors error: {e}")
         return {"primary": "#6366f1", "secondary": "#22d3ee"}
 
