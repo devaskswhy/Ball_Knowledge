@@ -7,3 +7,7 @@ node_modules/
 .vscode/
 .DS_Store
 
+# Local development databases
+*.db
+ballknowledge.db
+
