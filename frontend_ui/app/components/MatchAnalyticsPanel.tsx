@@ -23,6 +23,7 @@ interface Fixture {
 
 interface MatchAnalyticsPanelProps {
     fixture: Fixture | null;
+    league: string;
     onClose: () => void;
 }
 
@@ -32,6 +33,7 @@ interface MatchAnalyticsPanelProps {
  */
 export default function MatchAnalyticsPanel({
     fixture,
+    league,
     onClose,
 }: MatchAnalyticsPanelProps) {
     const [prediction, setPrediction] = useState<{
@@ -52,7 +54,7 @@ export default function MatchAnalyticsPanel({
             .post("http://localhost:8000/predict", {
                 home: fixture.home.name,
                 away: fixture.away.name,
-                league: "PL",
+                league: league,
             })
             .then((res) => {
                 setPrediction({

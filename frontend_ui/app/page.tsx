@@ -366,6 +366,7 @@ export default function Home() {
       {/* Match Analytics Slide-Over Panel */}
       <MatchAnalyticsPanel
         fixture={selectedFixture}
+        league={league}
         onClose={() => setSelectedFixture(null)}
       />
     </div>
