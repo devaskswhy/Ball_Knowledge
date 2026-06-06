@@ -5,7 +5,6 @@ import axios from "axios";
 import { Shield, Star, AlertTriangle, Clock, Sparkles, Users, Calendar, TrendingUp } from "lucide-react";
 import { motion } from "framer-motion";
 import InjurySelector, { Injury } from "./components/InjurySelector";
-import MatchContext from "./components/MatchContext";
 import TeamCombobox from "./components/TeamCombobox";
 import LineupBuilder from "./components/LineupBuilder";
 import TeamLineup from "./components/TeamLineup";
@@ -53,9 +52,9 @@ export default function Home() {
 
   const [preview, setPreview] = useState<string>("");
   const [loadingPreview, setLoadingPreview] = useState<boolean>(false);
-  const [injuryData, setInjuryData] = useState<any>(null);
 
   const [showLineup, setShowLineup] = useState(false);
+  const [showLineupBuilder, setShowLineupBuilder] = useState(false);
 
   const [homeInjuries, setHomeInjuries] = useState<Injury[]>([]);
   const [awayInjuries, setAwayInjuries] = useState<Injury[]>([]);
@@ -268,6 +267,17 @@ export default function Home() {
                 {loading ? "Predicting..." : "Predict Match"}
               </Button>
 
+              {/* Build Lineup Button */}
+              <Button
+                onClick={() => setShowLineupBuilder(true)}
+                disabled={!home}
+                variant="outline"
+                className="w-full border-primary/30 hover:bg-primary/20 hover:text-primary transition-colors"
+              >
+                <Users className="mr-2 h-4 w-4" />
+                Build Lineup
+              </Button>
+
               {/* Results */}
               {result && !result.error && result.home_win !== undefined && (
                 <Card className="bg-secondary">
@@ -368,6 +378,13 @@ export default function Home() {
         fixture={selectedFixture}
         league={league}
         onClose={() => setSelectedFixture(null)}
+      />
+
+      {/* LineupBuilder Modal */}
+      <LineupBuilder
+        team={home}
+        isOpen={showLineupBuilder}
+        onClose={() => setShowLineupBuilder(false)}
       />
     </div>
   );

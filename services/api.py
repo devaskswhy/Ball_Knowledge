@@ -42,21 +42,28 @@ LEAGUE_FILES = {
 }
 
 print("Initializing Leagues...")
+loaded_leagues = []
+failed_leagues = []
+
 for code, filename in LEAGUE_FILES.items():
     path = DATA_DIR / filename
-    # For now, if file doesn't exist, we skip or fallback.
-    # To demonstrate functionality without all files, we can optionally use the PL file for others if needed
-    # but strictly we should check existence.
     if path.exists():
-        league_manager.load_league(code, path)
+        try:
+            league_manager.load_league(code, path)
+            loaded_leagues.append(code)
+            print(f"    [OK] {code} loaded successfully from {filename}")
+        except Exception as e:
+            failed_leagues.append(code)
+            print(f"    [ERROR] Failed to load {code}: {e}")
     else:
-        print(f"    Placeholder: {code} data not found at {path}. (Upload data to enable)")
-        # Fallback for Demo: Load PL data for other leagues if missing, JUST FOR DEMO purposes
-        # so the UI doesn't crash if the user selects them.
-        # REMOVE THIS IN PRODUCTION
-        if code != "PL" and (DATA_DIR / "premier_league_2023_24.csv").exists():
-             print(f"   -> Loading PL data as fallback for {code} (DEMO MODE)")
-             league_manager.load_league(code, DATA_DIR / "premier_league_2023_24.csv")
+        failed_leagues.append(code)
+        print(f"    [WARNING] {code} data not found at {path}. Skipping league.")
+
+# Startup summary
+print("\n--- League Load Summary ---")
+print(f"Successfully loaded: {', '.join(loaded_leagues) if loaded_leagues else 'None'}")
+print(f"Failed to load: {', '.join(failed_leagues) if failed_leagues else 'None'}")
+print("--- End Summary ---\n")
 
 
 # ---------------- TEAM ID MAP (API-Football) ----------------
