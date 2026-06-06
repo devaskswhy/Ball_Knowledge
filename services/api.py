@@ -7,6 +7,8 @@ from pathlib import Path
 from services.external_data import get_injuries, role_counts, get_squad, search_team_id, get_featured_fixtures, get_top_players, get_team_colors, get_player_stats
 from services.wc_data import WC_2026_TEAMS, FIFA_RANKINGS
 from services.cache import cache
+from services.database import get_db, Base, engine
+from services.models import Match, Prediction, Team, Player
 
 
 # ---------------- APP ----------------
@@ -256,7 +258,7 @@ async def get_homepage_data():
     }
 
 @app.post("/predict")
-def predict(q: MatchQuery):
+def predict(q: MatchQuery, db = Depends(get_db)):
     ctx = league_manager.get_league(q.league)
     if not ctx:
         raise HTTPException(status_code=404, detail=f"League '{q.league}' not loaded or data missing.")
@@ -276,6 +278,20 @@ def predict(q: MatchQuery):
     res = predictor.predict_match(
         q.home, q.away, h_inj, a_inj, q.home_rest_days, q.away_rest_days
     )
+    
+    # Store prediction in database
+    prediction = Prediction(
+        home_win_prob=res["home_win"],
+        draw_prob=res["draw"],
+        away_win_prob=res["away_win"],
+        elo_diff=res["elo_diff"],
+        power_diff=res["power_diff"],
+        model_version="v1.0"
+    )
+    db.add(prediction)
+    db.commit()
+    db.refresh(prediction)
+    
     return {
         "home": res["home"],
         "away": res["away"],
@@ -288,6 +304,7 @@ def predict(q: MatchQuery):
         "away_penalty": round(res.get("away_penalty", 0), 1),
         "home_fatigue": round(res.get("home_fatigue", 0), 1),
         "away_fatigue": round(res.get("away_fatigue", 0), 1),
+        "prediction_id": prediction.id
     }
 
 @app.get("/preview")
