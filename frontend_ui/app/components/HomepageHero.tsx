@@ -210,26 +210,82 @@ export default function HomepageHero({ showMatches = true, showStats = true, onF
   const [topPlayers, setTopPlayers] = useState<Player[]>([]);
   const [playerOfWeek, setPlayerOfWeek] = useState<Player | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await axios.get("http://localhost:8000/homepage");
+      setFixtures(res.data.featured_fixtures || []);
+      setTopPlayers(res.data.top_players || []);
+      setPlayerOfWeek(res.data.player_of_week || null);
+    } catch (err) {
+      console.error("Failed to fetch homepage data", err);
+      setError("Failed to load homepage data. Please check your connection.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const res = await axios.get("http://localhost:8000/homepage");
-        setFixtures(res.data.featured_fixtures || []);
-        setTopPlayers(res.data.top_players || []);
-        setPlayerOfWeek(res.data.player_of_week || null);
-      } catch (err) {
-        console.error("Failed to fetch homepage data", err);
-      }
-      setLoading(false);
-    };
     fetchData();
   }, []);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="w-8 h-8 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+      <div className="space-y-8">
+        {/* Featured Matches Skeleton */}
+        {showMatches && (
+          <section>
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-5 h-5 bg-gray-700 rounded animate-pulse" />
+              <div className="h-6 w-48 bg-gray-700 rounded animate-pulse" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-40 bg-gray-800/50 rounded-2xl border border-white/5 animate-pulse" />
+              ))}
+            </div>
+          </section>
+        )}
+        {/* Top Players Skeleton */}
+        {showStats && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <section>
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-5 h-5 bg-gray-700 rounded animate-pulse" />
+                <div className="h-6 w-40 bg-gray-700 rounded animate-pulse" />
+              </div>
+              <div className="space-y-2">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="h-16 bg-gray-800/50 rounded-xl border border-white/5 animate-pulse" />
+                ))}
+              </div>
+            </section>
+            <section>
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-5 h-5 bg-gray-700 rounded animate-pulse" />
+                <div className="h-6 w-32 bg-gray-700 rounded animate-pulse" />
+              </div>
+              <div className="h-48 bg-gray-800/50 rounded-2xl border border-white/5 animate-pulse" />
+            </section>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-8 text-center">
+        <p className="text-red-400 mb-4">{error}</p>
+        <button
+          onClick={fetchData}
+          className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors"
+        >
+          Retry
+        </button>
       </div>
     );
   }

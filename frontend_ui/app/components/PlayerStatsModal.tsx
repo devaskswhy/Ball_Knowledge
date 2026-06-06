@@ -147,7 +147,7 @@ export default function PlayerStatsModal({
                                 </div>
                                 <div>
                                     <p className="text-xs text-gray-400">Appearances</p>
-                                    <p className="font-bold text-lg">{stats?.statistics?.games?.appearences || 0}</p>
+                                    <p className="font-bold text-lg">{stats?.statistics?.games?.appearances || 0}</p>
                                 </div>
                             </div>
                         </div>

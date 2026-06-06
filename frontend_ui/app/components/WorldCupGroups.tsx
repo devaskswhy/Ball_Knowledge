@@ -26,25 +26,51 @@ export default function WorldCupGroups() {
     }, []);
 
     const fetchGroups = async () => {
+        setLoading(true);
+        setError("");
         try {
             const res = await axios.get("http://localhost:8000/wc_groups");
             setGroups(res.data);
         } catch (err) {
             console.error("Failed to fetch WC groups", err);
-            setError("Could not load expected groups");
+            setError("Could not load expected groups. Please check your connection.");
         } finally {
             setLoading(false);
         }
     };
 
     if (loading) return (
-        <div className="flex justify-center p-8">
-            <Loader2 className="animate-spin text-primary h-8 w-8" />
+        <div className="space-y-6">
+            <div className="flex items-center gap-3 mb-6">
+                <div className="w-6 h-6 bg-gray-700 rounded animate-pulse" />
+                <div className="h-7 w-64 bg-gray-700 rounded animate-pulse" />
+                <div className="ml-auto h-6 w-32 bg-gray-700 rounded-full animate-pulse" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="bg-gray-800/50 rounded-xl overflow-hidden animate-pulse">
+                        <div className="h-10 bg-gray-700/50" />
+                        <div className="p-3 space-y-2">
+                            {[1, 2, 3, 4].map((j) => (
+                                <div key={j} className="h-10 bg-gray-700/30 rounded-lg" />
+                            ))}
+                        </div>
+                    </div>
+                ))}
+            </div>
         </div>
     );
 
     if (error) return (
-        <div className="text-center text-red-400 p-8">{error}</div>
+        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-8 text-center">
+            <p className="text-red-400 mb-4">{error}</p>
+            <button
+                onClick={fetchGroups}
+                className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors"
+            >
+                Retry
+            </button>
+        </div>
     );
 
     return (

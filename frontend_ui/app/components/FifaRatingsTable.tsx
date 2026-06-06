@@ -14,25 +14,54 @@ interface WCTeam {
 export default function FifaRatingsTable() {
     const [teams, setTeams] = useState<WCTeam[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const fetchRatings = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            // League=WC returns teams sorted by rank now
+            const res = await axios.get("http://localhost:8000/teams", { params: { league: "WC" } });
+            setTeams(res.data.teams);
+        } catch (err) {
+            console.error("Failed to fetch ratings", err);
+            setError("Failed to load FIFA rankings. Please check your connection.");
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchRatings = async () => {
-            try {
-                // League=WC returns teams sorted by rank now
-                const res = await axios.get("http://localhost:8000/teams", { params: { league: "WC" } });
-                setTeams(res.data.teams);
-            } catch (err) {
-                console.error("Failed to fetch ratings", err);
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchRatings();
     }, []);
 
     if (loading) return (
-        <div className="flex justify-center p-8">
-            <Loader2 className="animate-spin text-primary h-8 w-8" />
+        <div className="animate-in fade-in duration-500">
+            <div className="flex items-center gap-3 mb-6">
+                <div className="w-6 h-6 bg-gray-700 rounded animate-pulse" />
+                <div className="h-7 w-48 bg-gray-700 rounded animate-pulse" />
+                <div className="ml-auto h-5 w-24 bg-gray-700 rounded animate-pulse" />
+            </div>
+            <div className="bg-gray-800/50 border border-white/5 rounded-xl overflow-hidden">
+                <div className="h-12 bg-gray-700/50" />
+                <div className="divide-y divide-gray-700/30">
+                    {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                        <div key={i} className="h-16 bg-gray-700/20 animate-pulse" />
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+
+    if (error) return (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-8 text-center">
+            <p className="text-red-400 mb-4">{error}</p>
+            <button
+                onClick={fetchRatings}
+                className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors"
+            >
+                Retry
+            </button>
         </div>
     );
 
