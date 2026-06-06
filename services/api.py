@@ -1,10 +1,12 @@
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from contextlib import asynccontextmanager
 import pandas as pd
 import json
 from pathlib import Path
+from datetime import datetime
+import asyncio
 from services.external_data import get_injuries, role_counts, get_squad, search_team_id, get_featured_fixtures, get_top_players, get_team_colors, get_player_stats
 from services.wc_data import WC_2026_TEAMS, FIFA_RANKINGS
 from services.cache import cache
@@ -444,6 +446,58 @@ def get_cache_stats():
 def get_scheduler_status_endpoint():
     """Get scheduler status showing job next run times and last run times"""
     return get_scheduler_status()
+
+# ---------------- WEBSOCKET LIVE SCORES ----------------
+@app.websocket("/ws/live")
+async def live_scores_ws(websocket: WebSocket):
+    """WebSocket endpoint for live score updates"""
+    await websocket.accept()
+    
+    try:
+        while True:
+            # Send heartbeat ping every 30 seconds
+            await asyncio.sleep(30)
+            await websocket.send_json({"type": "ping", "timestamp": datetime.utcnow().isoformat()})
+            
+            # Fetch live scores every 60 seconds (after first ping)
+            await asyncio.sleep(30)
+            
+            try:
+                # Try to get live fixtures from cache or fetch fresh
+                from datetime import datetime
+                today = datetime.now().strftime("%Y-%m-%d")
+                cache_key = f"fixtures:{today}"
+                fixtures = cache.get(cache_key)
+                
+                if not fixtures:
+                    fixtures = await get_featured_fixtures()
+                
+                # Filter for live matches (status: 1H, HT, 2H, ET, P)
+                live_statuses = ["1H", "HT", "2H", "ET", "P"]
+                live_matches = [f for f in fixtures if f.get("status") in live_statuses]
+                
+                await websocket.send_json({
+                    "type": "live_scores",
+                    "matches": live_matches,
+                    "timestamp": datetime.utcnow().isoformat()
+                })
+                
+            except Exception as e:
+                print(f"Error fetching live scores: {e}")
+                await websocket.send_json({
+                    "type": "error",
+                    "message": "Failed to fetch live scores",
+                    "timestamp": datetime.utcnow().isoformat()
+                })
+                
+    except WebSocketDisconnect:
+        print("WebSocket client disconnected")
+    except Exception as e:
+        print(f"WebSocket error: {e}")
+        try:
+            await websocket.close()
+        except:
+            pass
 
 # ---------------- LIVE DATA ----------------
 

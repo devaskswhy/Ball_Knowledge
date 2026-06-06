@@ -5,6 +5,7 @@ import axios from "axios";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { Trophy, Star, TrendingUp, Zap, Calendar, ChevronRight } from "lucide-react";
+import { useWebSocket } from "@/app/contexts/WebSocketContext";
 
 export interface Fixture {
   id: number;
@@ -31,16 +32,23 @@ interface Player {
 // Featured Match Card
 function FeaturedMatchCard({ fixture, onClick }: { fixture: Fixture; onClick?: () => void }) {
   const matchTime = new Date(fixture.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  
+  // Check if match is live
+  const isLive = ["1H", "HT", "2H", "ET", "P"].includes(fixture.status);
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       onClick={onClick}
-      className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a] border border-white/10 p-6 group hover:border-cyan-500/30 transition-all duration-300 cursor-pointer hover:scale-[1.02]"
+      className={`relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a] border p-6 group transition-all duration-300 cursor-pointer hover:scale-[1.02] ${
+        isLive ? "border-green-500/50 hover:border-green-500/70" : "border-white/10 hover:border-cyan-500/30"
+      }`}
     >
       {/* Glowing orb effect */}
-      <div className="absolute -top-20 -right-20 w-40 h-40 bg-cyan-500/20 rounded-full blur-3xl group-hover:bg-cyan-500/30 transition-all" />
+      <div className={`absolute -top-20 -right-20 w-40 h-40 rounded-full blur-3xl group-hover:transition-all ${
+        isLive ? "bg-green-500/20 group-hover:bg-green-500/30" : "bg-cyan-500/20 group-hover:bg-cyan-500/30"
+      }`} />
       <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-purple-500/20 rounded-full blur-3xl" />
 
       {/* League badge */}
@@ -49,8 +57,20 @@ function FeaturedMatchCard({ fixture, onClick }: { fixture: Fixture; onClick?: (
           <Image src={fixture.league.logo} alt="" width={20} height={20} className="object-contain" />
         )}
         <span className="text-xs font-medium text-gray-400">{fixture.league.name}</span>
-        <span className="ml-auto flex items-center gap-1 text-xs text-cyan-400">
-          <Calendar size={12} /> {matchTime}
+        <span className="ml-auto flex items-center gap-1 text-xs">
+          {isLive ? (
+            <>
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+              </span>
+              <span className="font-bold text-green-400">LIVE</span>
+            </>
+          ) : (
+            <>
+              <Calendar size={12} className="text-cyan-400" /> {matchTime}
+            </>
+          )}
         </span>
       </div>
 
@@ -72,12 +92,16 @@ function FeaturedMatchCard({ fixture, onClick }: { fixture: Fixture; onClick?: (
             <span className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500">VS</span>
           ) : (
             <div className="flex items-center gap-2">
-              <span className="text-3xl font-black text-white">{fixture.score.home ?? 0}</span>
+              <span className={`text-3xl font-black ${isLive ? "text-green-400" : "text-white"}`}>
+                {fixture.score.home ?? 0}
+              </span>
               <span className="text-xl text-gray-500">-</span>
-              <span className="text-3xl font-black text-white">{fixture.score.away ?? 0}</span>
+              <span className={`text-3xl font-black ${isLive ? "text-green-400" : "text-white"}`}>
+                {fixture.score.away ?? 0}
+              </span>
             </div>
           )}
-          <span className="text-[10px] text-gray-500 mt-1">
+          <span className={`text-[10px] mt-1 ${isLive ? "text-green-400 font-bold" : "text-gray-500"}`}>
             {fixture.status === "NS" ? "Upcoming" : fixture.status}
           </span>
         </div>
@@ -211,6 +235,7 @@ export default function HomepageHero({ showMatches = true, showStats = true, onF
   const [playerOfWeek, setPlayerOfWeek] = useState<Player | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { wsConnected, setWsConnected } = useWebSocket();
 
   const fetchData = async () => {
     setLoading(true);
@@ -227,6 +252,69 @@ export default function HomepageHero({ showMatches = true, showStats = true, onF
       setLoading(false);
     }
   };
+
+  // WebSocket connection for live scores
+  useEffect(() => {
+    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000/ws/live";
+    let ws: WebSocket | null = null;
+    let reconnectTimer: NodeJS.Timeout | null = null;
+
+    const connectWebSocket = () => {
+      ws = new WebSocket(wsUrl);
+      
+      ws.onopen = () => {
+        console.log("WebSocket connected");
+        setWsConnected(true);
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          
+          if (message.type === "live_scores") {
+            // Update fixtures with live scores
+            setFixtures((prevFixtures) => {
+              const liveMatchesMap = new Map(
+                message.matches.map((m: Fixture) => [m.id, m])
+              );
+              
+              return prevFixtures.map((fixture) => {
+                const liveMatch = liveMatchesMap.get(fixture.id);
+                if (liveMatch) {
+                  return { ...fixture, ...liveMatch };
+                }
+                return fixture;
+              });
+            });
+          } else if (message.type === "ping") {
+            // Respond to ping to keep connection alive
+            console.log("Received ping from server");
+          } else if (message.type === "error") {
+            console.error("WebSocket error:", message.message);
+          }
+        } catch (err) {
+          console.error("Failed to parse WebSocket message:", err);
+        }
+      };
+
+      ws.onclose = () => {
+        console.log("WebSocket disconnected, reconnecting in 5 seconds...");
+        setWsConnected(false);
+        reconnectTimer = setTimeout(connectWebSocket, 5000);
+      };
+
+      ws.onerror = (error) => {
+        console.error("WebSocket error:", error);
+      };
+    };
+
+    connectWebSocket();
+
+    return () => {
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (ws) ws.close();
+    };
+  }, []);
 
   useEffect(() => {
     fetchData();

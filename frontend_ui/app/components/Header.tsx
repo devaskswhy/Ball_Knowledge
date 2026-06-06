@@ -1,10 +1,11 @@
 "use client"
 
 import Link from "next/link"
-import { Search, Bell, User, Menu, X, Trophy } from "lucide-react"
+import { Search, Bell, User, Menu, X, Trophy, Wifi, WifiOff } from "lucide-react"
 import { Button } from "@/app/components/ui/button"
 import { useState } from "react"
 import Image from "next/image"
+import { useWebSocket } from "@/app/contexts/WebSocketContext"
 
 interface HeaderProps {
     league: string
@@ -22,6 +23,7 @@ const LEAGUES = [
 
 export function Header({ league, setLeague }: HeaderProps) {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+    const { wsConnected } = useWebSocket()
 
     return (
         <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
@@ -65,6 +67,21 @@ export function Header({ league, setLeague }: HeaderProps) {
 
                     {/* Actions */}
                     <div className="flex items-center gap-2">
+                        {/* Live Connection Status */}
+                        <div className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-full bg-secondary/50">
+                            {wsConnected ? (
+                                <>
+                                    <Wifi className="h-3 w-3 text-green-500" />
+                                    <span className="text-[10px] text-green-500 font-medium">LIVE</span>
+                                </>
+                            ) : (
+                                <>
+                                    <WifiOff className="h-3 w-3 text-gray-500" />
+                                    <span className="text-[10px] text-gray-500 font-medium">OFFLINE</span>
+                                </>
+                            )}
+                        </div>
+                        
                         <Button variant="ghost" size="icon" className="hidden sm:flex">
                             <Search className="h-5 w-5" />
                             <span className="sr-only">Search</span>

@@ -18,6 +18,7 @@ import MatchAnalyticsPanel from "./components/MatchAnalyticsPanel";
 import PlayerAnalytics from "./components/PlayerAnalytics";
 import { Card, CardHeader, CardTitle, CardContent } from "./components/ui/card";
 import { Button } from "./components/ui/button";
+import { WebSocketProvider } from "./contexts/WebSocketContext";
 
 // TODO: Replace gradient with real image from /public/leagues/
 const LEAGUE_BG: Record<string, string> = {
@@ -39,7 +40,7 @@ const LEAGUE_STYLES: Record<string, { heading: string, text: string }> = {
   WC: { heading: "from-yellow-300 via-yellow-500 to-yellow-700", text: "text-yellow-100" }, // World Cup
 };
 
-export default function Home() {
+function Home() {
   const [home, setHome] = useState<string>("Arsenal");
   const [away, setAway] = useState<string>("Liverpool");
   const [league, setLeague] = useState<string>("PL");
@@ -387,5 +388,14 @@ export default function Home() {
         onClose={() => setShowLineupBuilder(false)}
       />
     </div>
+  );
+}
+
+// Wrap the page component with WebSocketProvider
+export default function Page() {
+  return (
+    <WebSocketProvider>
+      <Home />
+    </WebSocketProvider>
   );
 }
