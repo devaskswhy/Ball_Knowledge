@@ -458,7 +458,7 @@ async def health():
         "timestamp": time.time(),
         "cache": cache.stats(),
         "env": {
-            "has_api_football_key": bool(os.getenv("API_FOOTBALL_KEY")),
+            "has_api_sports_key": bool(os.getenv("API_SPORTS_KEY")),
             "data_dir_exists": os.path.isdir(DATA_DIR)
         }
     }

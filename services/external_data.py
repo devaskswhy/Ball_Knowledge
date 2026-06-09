@@ -4,13 +4,12 @@ from dotenv import load_dotenv
 from services.cache import cache, cached
 
 load_dotenv()
-API_KEY = os.getenv("API_FOOTBALL_KEY")
+API_KEY = os.getenv("API_SPORTS_KEY")
 if not API_KEY:
-    raise RuntimeError("API_FOOTBALL_KEY is not set. Add it to your .env file.")
+    raise RuntimeError("API_SPORTS_KEY is not set. Add it to your .env file.")
 
 HEADERS = {
-    "x-apisports-key": API_KEY,
-    "x-rapidapi-host": "v3.football.api-sports.io"
+    "x-apisports-key": API_KEY
 }
 BASE_URL = "https://v3.football.api-sports.io"
 
