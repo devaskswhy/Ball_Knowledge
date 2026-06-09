@@ -521,8 +521,66 @@ async def live_scores_ws(websocket: WebSocket):
         except:
             pass
 
-# ---------------- LIVE DATA ----------------
+# ================================================================
+# ============== WORLD CUP 2026 ENDPOINTS ========================
+# ================================================================
+from services.wc_api import (
+    fetch_wc_fixtures,
+    fetch_wc_live,
+    fetch_wc_standings,
+    fetch_wc_fixture_detail,
+    fetch_wc_headtohead,
+    fetch_wc_injuries,
+    fetch_wc_topscorers,
+)
+
+from typing import Optional
 
 
+@app.get("/wc/fixtures")
+async def wc_fixtures(
+    date: Optional[str] = None,
+    round: Optional[str] = None,
+    status: Optional[str] = None,
+):
+    """
+    World Cup 2026 fixtures.
+    Query params: date (YYYY-MM-DD), round (e.g. 'Group Stage - 1'), status (NS/1H/HT/2H/FT/FT_PEN).
+    """
+    return await fetch_wc_fixtures(date=date, round=round, status=status)
 
 
+@app.get("/wc/live")
+async def wc_live():
+    """Currently live World Cup matches only (never cached)."""
+    return await fetch_wc_live()
+
+
+@app.get("/wc/standings")
+async def wc_standings():
+    """World Cup group standings (5-minute cache)."""
+    return await fetch_wc_standings()
+
+
+@app.get("/wc/fixture/{fixture_id}")
+async def wc_fixture_detail(fixture_id: int):
+    """Full detail for one WC match — events, lineups, statistics (60-second cache)."""
+    return await fetch_wc_fixture_detail(fixture_id)
+
+
+@app.get("/wc/headtohead")
+async def wc_headtohead(team1: int, team2: int, last: int = 10):
+    """Head-to-head record between two teams (24-hour cache)."""
+    return await fetch_wc_headtohead(team1=team1, team2=team2, last=last)
+
+
+@app.get("/wc/injuries")
+async def wc_injuries(team_id: Optional[int] = None):
+    """World Cup injuries, optionally filtered by team_id (10-minute cache)."""
+    return await fetch_wc_injuries(team_id=team_id)
+
+
+@app.get("/wc/topscorers")
+async def wc_topscorers():
+    """Top 10 World Cup 2026 scorers (1-hour cache)."""
+    return await fetch_wc_topscorers()
