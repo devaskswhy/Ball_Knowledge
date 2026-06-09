@@ -7,6 +7,8 @@ import json
 from pathlib import Path
 from datetime import datetime
 import asyncio
+import time
+import os
 from services.external_data import get_injuries, role_counts, get_squad, search_team_id, get_featured_fixtures, get_top_players, get_team_colors, get_player_stats
 from services.wc_data import WC_2026_TEAMS, FIFA_RANKINGS
 from services.cache import cache
@@ -440,6 +442,26 @@ def get_wc_expected_groups():
 def get_cache_stats():
     """Get cache statistics and current contents for debugging"""
     return cache.get_stats()
+
+@app.delete("/cache/clear")
+async def clear_cache():
+    """Clear all cache entries. Returns stats before clearing."""
+    before = cache.stats()
+    cache.clear_all()
+    return {"message": "Cache cleared", "cleared_keys": before["active_keys"]}
+
+# ---------------- HEALTH CHECK ----------------
+@app.get("/health")
+async def health():
+    return {
+        "status": "ok",
+        "timestamp": time.time(),
+        "cache": cache.stats(),
+        "env": {
+            "has_api_football_key": bool(os.getenv("API_FOOTBALL_KEY")),
+            "data_dir_exists": os.path.isdir(DATA_DIR)
+        }
+    }
 
 # ---------------- SCHEDULER STATUS ----------------
 @app.get("/scheduler/status")
