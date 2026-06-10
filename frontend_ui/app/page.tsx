@@ -70,7 +70,12 @@ function Home() {
   useEffect(() => {
     const getTeams = async () => {
       try {
-        const res = await axios.get("http://localhost:8000/teams", { params: { league } });
+        let apiUrl = process.env.NEXT_PUBLIC_API_URL;
+        if (!apiUrl) {
+          apiUrl = typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.hostname}:8000` : "http://localhost:8000";
+        }
+        const cleanApiUrl = apiUrl.replace(/\/$/, "");
+        const res = await axios.get(`${cleanApiUrl}/teams`, { params: { league } });
         setTeams(res.data.teams);
         if (res.data.teams.length > 1) {
           setHome(res.data.teams[0].name);
@@ -87,7 +92,12 @@ function Home() {
     setLoading(true);
     setPreview("");
     try {
-      const response = await axios.post("http://localhost:8000/predict", {
+      let apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      if (!apiUrl) {
+        apiUrl = typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.hostname}:8000` : "http://localhost:8000";
+      }
+      const cleanApiUrl = apiUrl.replace(/\/$/, "");
+      const response = await axios.post(`${cleanApiUrl}/predict`, {
         home: home.trim(),
         away: away.trim(),
         home_injuries: homeInjuries,
@@ -109,7 +119,12 @@ function Home() {
     if (!result || result.error) return;
     setLoadingPreview(true);
     try {
-      const res = await axios.get("http://localhost:8000/preview", {
+      let apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      if (!apiUrl) {
+        apiUrl = typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.hostname}:8000` : "http://localhost:8000";
+      }
+      const cleanApiUrl = apiUrl.replace(/\/$/, "");
+      const res = await axios.get(`${cleanApiUrl}/preview`, {
         params: {
           home,
           away,

@@ -241,7 +241,12 @@ export default function HomepageHero({ showMatches = true, showStats = true, onF
     setLoading(true);
     setError(null);
     try {
-      const res = await axios.get("http://localhost:8000/homepage");
+      let apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      if (!apiUrl) {
+        apiUrl = typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.hostname}:8000` : "http://localhost:8000";
+      }
+      const cleanApiUrl = apiUrl.replace(/\/$/, "");
+      const res = await axios.get(`${cleanApiUrl}/homepage`);
       setFixtures(res.data.featured_fixtures || []);
       setTopPlayers(res.data.top_players || []);
       setPlayerOfWeek(res.data.player_of_week || null);
@@ -255,19 +260,46 @@ export default function HomepageHero({ showMatches = true, showStats = true, onF
 
   // WebSocket connection for live scores
   useEffect(() => {
-    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000/ws/live";
+    let isMounted = true;
+    
+    // Resolve URL dynamically to handle cases where frontend is accessed from a different device (e.g. 192.168.x.x)
+    let baseApiUrl = process.env.NEXT_PUBLIC_API_URL;
+    if (!baseApiUrl) {
+      if (typeof window !== 'undefined') {
+        baseApiUrl = `${window.location.protocol}//${window.location.hostname}:8000`;
+      } else {
+        baseApiUrl = "http://localhost:8000";
+      }
+    }
+    
+    const cleanApiUrl = baseApiUrl.replace(/\/$/, "");
+    const defaultWsUrl = cleanApiUrl.replace(/^http/, "ws") + "/ws/live";
+    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || defaultWsUrl;
+    
     let ws: WebSocket | null = null;
     let reconnectTimer: NodeJS.Timeout | null = null;
 
     const connectWebSocket = () => {
-      ws = new WebSocket(wsUrl);
+      if (!isMounted) return;
+      
+      try {
+        ws = new WebSocket(wsUrl);
+      } catch (err) {
+        console.error("Invalid WebSocket URL:", wsUrl, err);
+        return;
+      }
       
       ws.onopen = () => {
-        console.log("WebSocket connected");
+        if (!isMounted) {
+          ws?.close();
+          return;
+        }
+        console.log("WebSocket connected to", wsUrl);
         setWsConnected(true);
       };
 
       ws.onmessage = (event) => {
+        if (!isMounted) return;
         try {
           const message = JSON.parse(event.data);
           
@@ -298,21 +330,29 @@ export default function HomepageHero({ showMatches = true, showStats = true, onF
       };
 
       ws.onclose = () => {
+        if (!isMounted) return;
         console.log("WebSocket disconnected, reconnecting in 5 seconds...");
         setWsConnected(false);
         reconnectTimer = setTimeout(connectWebSocket, 5000);
       };
 
-      ws.onerror = () => {
-        console.error("WebSocket connection error - will attempt reconnection");
+      ws.onerror = (error) => {
+        if (!isMounted) return;
+        console.error(`WebSocket connection error to ${wsUrl} - will attempt reconnection`);
       };
     };
 
     connectWebSocket();
 
     return () => {
+      isMounted = false;
       if (reconnectTimer) clearTimeout(reconnectTimer);
-      if (ws) ws.close();
+      if (ws) {
+        ws.onclose = null;
+        ws.onerror = null;
+        ws.onmessage = null;
+        ws.close();
+      }
     };
   }, []);
 
