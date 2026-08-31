@@ -22,5 +22,5 @@ services:
       # Set in the Render dashboard - never committed to the repo.
       - key: API_SPORTS_KEY
         sync: false
-      - key: ANTHROPIC_API_KEY
+      - key: GEMINI_API_KEY
         sync: false

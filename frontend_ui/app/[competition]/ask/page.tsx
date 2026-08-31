@@ -81,7 +81,7 @@ export default function AskPage() {
             Ask the AI about {meta.name}
           </CardTitle>
           <p className="text-sm text-muted-foreground mt-1">
-            Claude answers using the same tables, title-race simulations, and match model you see
+            Gemini answers using the same tables, title-race simulations, and match model you see
             elsewhere on this site — it calls tools to look numbers up rather than inventing them,
             and says so when it doesn't have data for something.
           </p>

@@ -31,6 +31,6 @@ psycopg2-binary>=2.9.0,<3.0.0
 # Task scheduler for background jobs
 apscheduler>=3.10.0,<4.0.0
 
-# Claude API client for AI-narrated previews, title-race summaries, and Q&A
-anthropic>=0.125.0,<1.0.0
+# Gemini API client for AI-narrated previews, title-race summaries, and Q&A
+google-genai>=2.20.0,<3.0.0
 

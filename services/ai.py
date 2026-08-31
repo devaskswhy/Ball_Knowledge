@@ -1,37 +1,45 @@
-"""Claude-powered narration layer.
+"""Gemini-powered narration layer.
 
 Two rules everything here follows:
 
-1. Claude never produces a number. Every probability, percentage, or score it
-   cites has to come from data we hand it directly in the prompt or from a
-   tool call it makes — the system prompt states this as a hard rule, and
+1. The model never produces a number. Every probability, percentage, or score
+   it cites has to come from data we hand it — either baked into the prompt or
+   returned by a tool call. The system instruction states this explicitly and
    none of the tools give the model a way to compute anything itself. They
    only return numbers our own models (Elo, Poisson, Monte Carlo) already
    computed.
 2. If the data isn't there — an unknown team, an unloaded competition, a cup
    asked for a title race — the tool returns an explicit error string and the
-   model is instructed to say so plainly rather than guess.
+   model is instructed to say so rather than guess.
+
+Runs on Gemini's free tier, so the deployed app costs nothing to operate.
+Get a key at https://aistudio.google.com/apikey and set GEMINI_API_KEY.
 
 Nothing here talks to the football data APIs. It only reads from the
 LeagueManager that services/api.py already built at startup, via configure().
 """
 
 import json
-import time
-from datetime import date, timezone
+import os
+from datetime import date
 
-import anthropic
-from anthropic import beta_tool
+from google import genai
+from google.genai import types
 
 from services.standings import COMPETITIONS, get_standings_source
 from services.simulator import title_race
 from services.bracket import bracket
 
-MODEL = "claude-opus-5"
+# Overridable so a model rename never requires a code change.
+MODEL = os.getenv("GEMINI_MODEL", "gemini-3.7-flash")
 
-# A demo project on a metered key needs a ceiling, same reasoning as the
-# football-data budget in services/external_data.py.
-DAILY_CALL_LIMIT = 40
+# The free tier is rate limited rather than billed, but a runaway loop is
+# still worth a ceiling — same reasoning as the football-data budget in
+# services/external_data.py.
+DAILY_CALL_LIMIT = 200
+
+# Cap on how many tool calls Gemini may chain in one /ai/ask turn.
+MAX_TOOL_CALLS = 6
 
 SYSTEM_PROMPT = """You are the Ball Knowledge match analyst, narrating outputs
 from a statistical model (Elo ratings, a Poisson goal model, and Monte Carlo
@@ -67,20 +75,11 @@ _client = None
 
 
 def _get_client():
+    """Lazily build the client so a missing key fails per-request, not at import."""
     global _client
     if _client is None:
-        _client = anthropic.Anthropic()
+        _client = genai.Client()
     return _client
-
-
-_async_client = None
-
-
-def _get_async_client():
-    global _async_client
-    if _async_client is None:
-        _async_client = anthropic.AsyncAnthropic()
-    return _async_client
 
 
 # ---------------------------------------------------------------------------
@@ -113,11 +112,12 @@ def _consume():
 
 # ---------------------------------------------------------------------------
 # Tools — each one is a thin, read-only wrapper around a service that already
-# exists. None of them let Claude touch anything it could compute a figure
-# from that we haven't already computed ourselves.
+# exists. Gemini builds the schema from the type hints and docstring, and
+# executes them itself via automatic function calling. None of them let the
+# model touch anything it could compute a figure from that we haven't already
+# computed ourselves.
 # ---------------------------------------------------------------------------
 
-@beta_tool
 def get_standings(league: str) -> str:
     """Current league table for a competition, computed from real results.
 
@@ -131,7 +131,6 @@ def get_standings(league: str) -> str:
     return json.dumps(source(ctx))
 
 
-@beta_tool
 def get_title_race(league: str) -> str:
     """Monte Carlo title-race projection for a league. Not valid for cups.
 
@@ -149,7 +148,6 @@ def get_title_race(league: str) -> str:
     return json.dumps(title_race(ctx, league))
 
 
-@beta_tool
 def predict_match(league: str, home: str, away: str) -> str:
     """Model prediction and expected goals for one specific fixture.
 
@@ -179,8 +177,7 @@ def predict_match(league: str, home: str, away: str) -> str:
     })
 
 
-@beta_tool
-def get_bracket(competition: str = "UCL") -> str:
+def get_bracket(competition: str) -> str:
     """Knockout bracket simulation for a cup competition (currently only UCL).
 
     Args:
@@ -202,6 +199,10 @@ def _competition_name(code):
     return COMPETITIONS.get(code, {}).get("name", code)
 
 
+def _config(**kwargs):
+    return types.GenerateContentConfig(system_instruction=SYSTEM_PROMPT, **kwargs)
+
+
 # ---------------------------------------------------------------------------
 # /ai/preview — streamed narration of a single, already-computed prediction
 # ---------------------------------------------------------------------------
@@ -209,8 +210,8 @@ def _competition_name(code):
 async def preview_stream(home, away, league, prediction, goals):
     """SSE generator narrating a prediction the caller already computed.
 
-    Effort is deliberately low and max_tokens small — this is a few sentences
-    of colour on numbers that already exist, not an analysis task.
+    No tools here — the figures are handed over directly, so there is nothing
+    for the model to look up and nothing for it to compute.
     """
     try:
         _consume()
@@ -218,8 +219,6 @@ async def preview_stream(home, away, league, prediction, goals):
         yield f"data: {json.dumps({'error': str(e)})}\n\n"
         yield "data: [DONE]\n\n"
         return
-
-    client = _get_async_client()
 
     data_block = json.dumps({
         "competition": _competition_name(league),
@@ -239,22 +238,18 @@ async def preview_stream(home, away, league, prediction, goals):
     )
 
     try:
-        async with client.messages.stream(
+        client = _get_client()
+        stream = await client.aio.models.generate_content_stream(
             model=MODEL,
-            max_tokens=1024,
-            system=SYSTEM_PROMPT,
-            output_config={"effort": "low"},
-            messages=[{"role": "user", "content": user_message}],
-        ) as stream:
-            async for text in stream.text_stream:
-                yield f"data: {json.dumps({'text': text})}\n\n"
-
-            final = await stream.get_final_message()
-            if final.stop_reason == "refusal":
-                yield f"data: {json.dumps({'error': 'The model declined to generate this preview.'})}\n\n"
+            contents=user_message,
+            config=_config(max_output_tokens=1024),
+        )
+        async for chunk in stream:
+            if chunk.text:
+                yield f"data: {json.dumps({'text': chunk.text})}\n\n"
     except Exception as e:
         # Covers API errors as well as client-side failures like a missing
-        # ANTHROPIC_API_KEY, which the SDK raises as a plain TypeError.
+        # GEMINI_API_KEY, which the SDK raises as a plain ValueError.
         yield f"data: {json.dumps({'error': str(e)})}\n\n"
     finally:
         yield "data: [DONE]\n\n"
@@ -276,65 +271,59 @@ def narrate_title_race(league, race_data):
         f"data:\n{data_block}"
     )
 
-    response = client.messages.create(
+    response = client.models.generate_content(
         model=MODEL,
-        max_tokens=1024,
-        system=SYSTEM_PROMPT,
-        output_config={"effort": "medium"},
-        messages=[{"role": "user", "content": user_message}],
+        contents=user_message,
+        config=_config(max_output_tokens=1024),
     )
 
-    if response.stop_reason == "refusal":
-        return {"summary": None, "refused": True}
-
-    text = "".join(b.text for b in response.content if b.type == "text")
+    text = response.text
+    if not text:
+        return {"summary": None, "error": "The model returned no text for this projection."}
     return {"summary": text}
 
 
 # ---------------------------------------------------------------------------
-# /ai/ask — free-form Q&A over the tool set, effort high
+# /ai/ask — free-form Q&A, with Gemini calling the tools itself
 # ---------------------------------------------------------------------------
 
 def ask(question):
-    """Runs the tool-calling loop and returns the final answer plus a trace
-    of which tools were called, so the API response stays inspectable.
+    """Runs the tool-calling loop and returns the final answer plus a trace of
+    which tools were called, so the API response stays inspectable.
     """
     _consume()
-    client = _get_client()
 
     tool_calls = []
     try:
-        runner = client.beta.messages.tool_runner(
+        client = _get_client()
+        response = client.models.generate_content(
             model=MODEL,
-            max_tokens=4096,
-            system=SYSTEM_PROMPT,
-            output_config={"effort": "high"},
-            tools=TOOLS,
-            messages=[{"role": "user", "content": question}],
+            contents=question,
+            config=_config(
+                tools=TOOLS,
+                max_output_tokens=4096,
+                automatic_function_calling=types.AutomaticFunctionCallingConfig(
+                    maximum_remote_calls=MAX_TOOL_CALLS
+                ),
+            ),
         )
-
-        final_message = None
-        for message in runner:
-            final_message = message
-            for block in message.content:
-                if block.type == "tool_use":
-                    tool_calls.append({"tool": block.name, "input": block.input})
     except Exception as e:
         # Covers API errors as well as client-side failures like a missing
-        # ANTHROPIC_API_KEY, which the SDK raises as a plain TypeError.
+        # GEMINI_API_KEY, which the SDK raises as a plain ValueError.
         return {"answer": None, "error": str(e), "tool_calls": tool_calls}
 
-    if final_message is None:
-        return {"answer": "", "tool_calls": tool_calls, "stop_reason": None}
+    for entry in response.automatic_function_calling_history or []:
+        for part in getattr(entry, "parts", None) or []:
+            call = getattr(part, "function_call", None)
+            if call:
+                tool_calls.append({"tool": call.name, "input": dict(call.args or {})})
 
-    if final_message.stop_reason == "refusal":
-        detail = getattr(final_message, "stop_details", None)
+    text = response.text
+    if not text:
         return {
             "answer": "I can't answer that one.",
             "refused": True,
-            "category": getattr(detail, "category", None),
             "tool_calls": tool_calls,
         }
 
-    text = "".join(b.text for b in final_message.content if b.type == "text")
-    return {"answer": text, "tool_calls": tool_calls, "stop_reason": final_message.stop_reason}
+    return {"answer": text, "tool_calls": tool_calls}

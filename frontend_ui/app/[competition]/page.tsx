@@ -124,7 +124,7 @@ export default function CompetitionHub() {
               className="border-primary/30 hover:bg-primary/20 hover:text-primary"
             >
               <Sparkles className="h-4 w-4 mr-2" />
-              {narrating ? "Thinking..." : "Ask Claude to narrate this"}
+              {narrating ? "Thinking..." : "Ask the AI to narrate this"}
             </Button>
           </CardHeader>
           <CardContent>

@@ -7,13 +7,13 @@
 Current standings, a Monte Carlo title race, a Champions League bracket simulation,
 and per-match predictions — for the Premier League, La Liga, Serie A, Ligue 1,
 Bundesliga, and the UEFA Champions League. Every number comes from real results,
-never a placeholder, and Claude narrates it on request without ever inventing a figure.
+never a placeholder, and Gemini narrates it on request without ever inventing a figure.
 
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)](https://www.python.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
-[![Claude API](https://img.shields.io/badge/AI-Claude%20Opus%205-D97757?logo=anthropic&logoColor=white)](https://www.anthropic.com)
+[![Gemini API](https://img.shields.io/badge/AI-Gemini%20Flash-4285F4?logo=googlegemini&logoColor=white)](https://ai.google.dev)
 [![GSAP](https://img.shields.io/badge/Motion-GSAP%20%2B%20Lenis-88CE02)](https://gsap.com)
 
 ![Ball Knowledge homepage](docs/screenshots/home-hero.png)
@@ -35,8 +35,8 @@ competition its own visual identity instead of one reskinned template six times.
   closed-form two-legged win probability, validated against what actually happened.
 - 🔮 **Match predictions** with injury and rest-day adjustments, expected
   goals, and a likely scoreline — not just a home/draw/away split.
-- 🤖 **Claude-narrated previews and Q&A** that call read-only tools for every
-  number they cite and say so plainly when the data isn't there.
+- 🤖 **AI-narrated previews and Q&A** (Gemini, free tier) that call read-only
+  tools for every number they cite and say so plainly when the data isn't there.
 - 🎨 **Six visual territories** — a real motif and typeface per competition,
   drawn from that league's own footballing culture.
 
@@ -77,7 +77,7 @@ the two can never quietly disagree with each other.
 
 ## An AI layer with a hard rule: it never invents a number
 
-Ask a free-form question and Claude answers by calling the same tools that
+Ask a free-form question and Gemini answers by calling the same tools that
 back every other page — `get_standings`, `get_title_race`, `predict_match`,
 `get_bracket` — never by generating a figure on its own. If the data for a
 question isn't available, it says so instead of guessing.
@@ -100,7 +100,7 @@ flowchart LR
         Simulator["simulator.py\nMonte Carlo title race"]
         Bracket["bracket.py\nMonte Carlo bracket"]
         Predictor["predictor.py + poisson.py"]
-        AI["ai.py\nClaude tool runner"]
+        AI["ai.py\nGemini tool calling"]
     end
 
     subgraph Data["Data"]
@@ -109,7 +109,7 @@ flowchart LR
         DB[("Postgres / SQLite\nprediction history")]
     end
 
-    Claude[["Claude Opus 5"]]
+    Gemini[["Gemini Flash (free tier)"]]
     APIFootball[["API-Football\nfixtures, players"]]
 
     Home --> Backend
@@ -122,7 +122,7 @@ flowchart LR
     AI -->|tool calls| Simulator
     AI -->|tool calls| Predictor
     AI -->|tool calls| Bracket
-    AI <--> Claude
+    AI <--> Gemini
     Standings --> CSV
     Bracket --> Snapshot
     Predictor --> DB
@@ -142,7 +142,7 @@ flowchart LR
   Champions League, resolved with a closed-form two-legged win probability
   instead of an inner simulation loop (`services/simulator.py`,
   `services/bracket.py`).
-- **Claude** narrates the numbers above on request — it never computes or
+- **Gemini** narrates the numbers above on request — it never computes or
   invents a figure itself, only relays ones already produced by the model,
   and says so plainly when it doesn't have the data (`services/ai.py`).
 
@@ -158,7 +158,7 @@ finished, so there's nothing to refresh.
 |---|---|
 | **Backend** | FastAPI, SQLAlchemy + Alembic, pandas/NumPy, APScheduler |
 | **Frontend** | Next.js 16 (App Router), React 19, Tailwind v4, GSAP + Lenis |
-| **AI** | Claude Opus 5 via the Anthropic SDK (tool runner, adaptive thinking) |
+| **AI** | Gemini Flash via the Google Gen AI SDK (automatic function calling) — free tier |
 | **Data** | football-data.co.uk (leagues), API-Football (fixtures/players/UCL snapshot) |
 | **Database** | Postgres in production, SQLite for local dev |
 | **Deployment** | Render (backend + Postgres), Vercel (frontend) |
@@ -181,7 +181,7 @@ Frontend routes:
 | `/` | Competition picker + live fixtures/top-players widget |
 | `/[competition]` | Table, and title race (leagues) or bracket (UCL) |
 | `/[competition]/predict` | Match predictor, injuries, lineups, AI preview |
-| `/[competition]/ask` | Free-form Q&A over the model via Claude tool use |
+| `/[competition]/ask` | Free-form Q&A over the model via Gemini tool calling |
 
 ## API reference
 
@@ -195,9 +195,9 @@ All routes live in `services/api.py`.
 | `GET` | `/bracket?competition=` | Monte Carlo knockout bracket (cups only) |
 | `GET` | `/teams?league=` | Teams with power scores for a competition |
 | `POST` | `/predict` | Home/draw/away, expected goals, and a likely scoreline for one fixture |
-| `POST` | `/ai/preview` | Streamed (SSE) Claude narration of a prediction |
-| `POST` | `/ai/title_race` | Claude narration of a title-race projection |
-| `POST` | `/ai/ask` | Free-form Q&A, Claude calling tools for every figure it cites |
+| `POST` | `/ai/preview` | Streamed (SSE) AI narration of a prediction |
+| `POST` | `/ai/title_race` | AI narration of a title-race projection |
+| `POST` | `/ai/ask` | Free-form Q&A, the model calling tools for every figure it cites |
 | `GET` | `/health` | Loaded leagues, football-API budget, AI-call budget |
 
 ## Local development
@@ -206,7 +206,7 @@ All routes live in `services/api.py`.
 
 ```bash
 pip install -r requirements.txt
-cp .env.example .env   # fill in API_SPORTS_KEY and ANTHROPIC_API_KEY
+cp .env.example .env   # fill in API_SPORTS_KEY and GEMINI_API_KEY
 python -m alembic upgrade head
 python -m uvicorn services.api:app --reload --port 8000
 ```
@@ -248,7 +248,7 @@ See `.env.example` for the backend. In short:
 | Variable | Required | Notes |
 |---|---|---|
 | `API_SPORTS_KEY` (or `API_FOOTBALL_KEY`) | Yes | Free plan: 100 requests/day, capped in-app at 90 |
-| `ANTHROPIC_API_KEY` | For `/ai/*` routes | Everything else works without it |
+| `GEMINI_API_KEY` | For `/ai/*` routes | Free tier — [aistudio.google.com/apikey](https://aistudio.google.com/apikey), no billing account needed. Everything else works without it |
 | `DATABASE_URL` | No | Defaults to local SQLite; set for Postgres in production |
 
 Frontend: `NEXT_PUBLIC_API_URL`, pointing at the backend's base URL.
@@ -268,7 +268,7 @@ Postgres database and a web service wired together, running
    Render reads `render.yaml` and creates both resources.
 3. Once created, open the web service's **Environment** tab and set:
    - `API_SPORTS_KEY` — your API-Football key
-   - `ANTHROPIC_API_KEY` — your Claude API key
+   - `GEMINI_API_KEY` — your Gemini API key (free, from aistudio.google.com/apikey)
    (`DATABASE_URL` is wired automatically from the Postgres instance.)
 4. Deploy. Check `https://<your-service>.onrender.com/health` — it reports
    `leagues_loaded`, the API budget, and the AI budget.
@@ -303,3 +303,8 @@ Postgres database and a web service wired together, running
 - CORS is wide open (`allow_origins=["*"]`) since this is a public,
   read-mostly demo with no authentication. Lock it down in
   `services/api.py` if that ever changes.
+- The AI layer runs on Gemini's **free tier**, which is rate limited rather
+  than billed — under load the `/ai/*` routes may return a quota error while
+  every other route keeps working. `services/ai.py` also caps itself at
+  `DAILY_CALL_LIMIT` calls a day. Set `GEMINI_MODEL` to pin a different model
+  without touching code.

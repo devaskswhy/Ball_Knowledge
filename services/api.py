@@ -354,7 +354,7 @@ class AskQuery(BaseModel):
 
 @app.post("/ai/preview")
 def ai_preview(q: PreviewQuery):
-    """Streamed, Claude-narrated preview of an already-computed prediction.
+    """Streamed, AI-narrated preview of an already-computed prediction.
 
     The model never sees raw team data — only the prediction and expected
     goals our own models already produced — and is instructed never to state
@@ -382,7 +382,7 @@ def ai_preview(q: PreviewQuery):
 
 @app.post("/ai/title_race")
 def ai_title_race(q: TitleRaceAskQuery):
-    """Title-race numbers plus a short Claude narration of the same numbers."""
+    """Title-race numbers plus a short AI narration of the same numbers."""
     meta = COMPETITIONS.get(q.league)
     if meta and meta["kind"] == "cup":
         raise HTTPException(status_code=400, detail=f"'{q.league}' is a knockout competition - use /bracket instead")
@@ -404,7 +404,7 @@ def ai_title_race(q: TitleRaceAskQuery):
 
 @app.post("/ai/ask")
 async def ai_ask(q: AskQuery):
-    """Free-form football Q&A. Claude calls read-only tools for every number
+    """Free-form football Q&A. The model calls read-only tools for every number
     it uses; nothing here lets it compute or invent one.
     """
     try:

@@ -54,7 +54,7 @@ export function Footer() {
               <li><span className="text-muted-foreground">Elo ratings, season-regressed</span></li>
               <li><span className="text-muted-foreground">Poisson goal model</span></li>
               <li><span className="text-muted-foreground">Monte Carlo title races (10,000 sims)</span></li>
-              <li><span className="text-muted-foreground">Claude-narrated previews</span></li>
+              <li><span className="text-muted-foreground">Gemini-narrated previews</span></li>
             </ul>
           </div>
 
