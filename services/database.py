@@ -14,6 +14,11 @@ DEFAULT_SQLITE_PATH = REPO_ROOT / "ballknowledge.db"
 
 DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{DEFAULT_SQLITE_PATH.as_posix()}")
 
+# Some hosts (Heroku-style) still hand back the deprecated "postgres://"
+# scheme; SQLAlchemy 1.4+ only recognizes "postgresql://".
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
 # Create SQLAlchemy engine
 engine = create_engine(DATABASE_URL)
 
