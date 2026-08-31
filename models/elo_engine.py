@@ -36,6 +36,17 @@ class EloEngine:
 
         self.team_elos[home] = new_elo_home
         self.team_elos[away] = new_elo_away
+    def regress_to_mean(self, weight=1/3):
+        """Pull every rating toward the baseline at a season boundary.
+
+        Squads turn over between seasons, so a rating earned last season is
+        evidence about this one but not a full substitute for it. A third of
+        the way back to 1500 is the usual convention.
+        """
+        for team, elo in self.team_elos.items():
+            self.team_elos[team] = elo + (self.base_elo - elo) * weight
+        return self.team_elos
+
     def compute_season(self, df):
         for _, row in df.iterrows():
             self.update(

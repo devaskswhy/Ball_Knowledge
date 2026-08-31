@@ -81,19 +81,36 @@ print("Initializing Leagues...")
 loaded_leagues = []
 failed_leagues = []
 
+# data/<season>/<code>.csv, e.g. data/2627/E0.csv. Oldest first, so the newest
+# season is the current table and the older ones only inform Elo and form.
+# Falls back to the flat data/<code>.csv layout if no season folders exist.
+SEASON_DIRS = sorted(
+    p for p in DATA_DIR.iterdir()
+    if p.is_dir() and len(p.name) == 4 and p.name.isdigit()
+)
+
 for code, filename in LEAGUE_FILES.items():
-    path = DATA_DIR / filename
-    if path.exists():
-        try:
-            league_manager.load_league(code, path)
-            loaded_leagues.append(code)
-            print(f"    [OK] {code} loaded successfully from {filename}")
-        except Exception as e:
-            failed_leagues.append(code)
-            print(f"    [ERROR] Failed to load {code}: {e}")
-    else:
+    paths = [d / filename for d in SEASON_DIRS if (d / filename).exists()]
+    if not paths and (DATA_DIR / filename).exists():
+        paths = [DATA_DIR / filename]
+
+    if not paths:
         failed_leagues.append(code)
-        print(f"    [WARNING] {code} data not found at {path}. Skipping league.")
+        print(f"    [WARNING] {code}: no data found for {filename}. Skipping league.")
+        continue
+
+    try:
+        league_manager.load_league(code, paths)
+        if league_manager.get_league(code):
+            loaded_leagues.append(code)
+            seasons = ", ".join(p.parent.name for p in paths)
+            print(f"    [OK] {code} loaded from {filename} (seasons: {seasons})")
+        else:
+            failed_leagues.append(code)
+            print(f"    [ERROR] {code} produced no usable league")
+    except Exception as e:
+        failed_leagues.append(code)
+        print(f"    [ERROR] Failed to load {code}: {e}")
 
 # Startup summary
 print("\n--- League Load Summary ---")
