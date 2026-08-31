@@ -311,19 +311,34 @@ def predict(q: MatchQuery, db = Depends(get_db)):
         away_power_loss=res.get("away_penalty", 0) + max(res.get("away_fatigue", 0), 0),
     )
     
-    # Store prediction in database
+    # Store prediction in database. The model returns numpy floats, which
+    # SQLite tolerates (numpy.float64 subclasses float) but psycopg2 refuses
+    # to adapt - so cast to native floats before they reach the driver.
     prediction = Prediction(
-        home_win_prob=res["home_win"],
-        draw_prob=res["draw"],
-        away_win_prob=res["away_win"],
-        elo_diff=res["elo_diff"],
-        power_diff=res["power_diff"],
+        home_win_prob=float(res["home_win"]),
+        draw_prob=float(res["draw"]),
+        away_win_prob=float(res["away_win"]),
+        elo_diff=float(res["elo_diff"]),
+        power_diff=float(res["power_diff"]),
         model_version="v1.0"
     )
-    db.add(prediction)
-    db.commit()
-    db.refresh(prediction)
-    
+
+    # Storing the prediction is an audit log, not part of the answer. If the
+    # insert fails the caller should still get their prediction, so this is
+    # non-fatal - the error is reported alongside the result instead of
+    # turning the whole request into a 500.
+    prediction_id = None
+    storage_error = None
+    try:
+        db.add(prediction)
+        db.commit()
+        db.refresh(prediction)
+        prediction_id = prediction.id
+    except Exception as e:
+        db.rollback()
+        storage_error = f"{type(e).__name__}: {e}"
+        print(f"[predict] could not store prediction: {storage_error}")
+
     return {
         "home": res["home"],
         "away": res["away"],
@@ -336,7 +351,8 @@ def predict(q: MatchQuery, db = Depends(get_db)):
         "away_penalty": round(res.get("away_penalty", 0), 1),
         "home_fatigue": round(res.get("home_fatigue", 0), 1),
         "away_fatigue": round(res.get("away_fatigue", 0), 1),
-        "prediction_id": prediction.id,
+        "prediction_id": prediction_id,
+        "storage_error": storage_error,
         **goals,
     }
 
