@@ -10,6 +10,7 @@ import { Card, CardContent } from "./components/ui/card";
 import { Button } from "./components/ui/button";
 import { WebSocketProvider } from "./contexts/WebSocketContext";
 import { COMPETITION_ORDER, COMPETITIONS } from "./lib/competitions";
+import { territoryFont } from "./lib/fonts";
 
 function Home() {
   const [showMatches, setShowMatches] = useState(true);
@@ -96,7 +97,7 @@ function Home() {
                         </span>
                         <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary" />
                       </div>
-                      <h3 className={`text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r ${meta.heading}`}>
+                      <h3 className={`text-2xl bg-clip-text text-transparent bg-gradient-to-r ${meta.heading} ${territoryFont(meta.code)}`}>
                         {meta.name}
                       </h3>
                       <p className={`mt-2 text-xs ${meta.accentText}`}>{meta.vibe}</p>
