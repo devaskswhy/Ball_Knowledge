@@ -23,6 +23,7 @@ COMPETITIONS = {
     "SA": {"name": "Serie A", "country": "Italy", "kind": "league", "teams": 20},
     "L1": {"name": "Ligue 1", "country": "France", "kind": "league", "teams": 18},
     "BL": {"name": "Bundesliga", "country": "Germany", "kind": "league", "teams": 18},
+    "UCL": {"name": "UEFA Champions League", "country": "Europe", "kind": "cup", "teams": 36},
 }
 
 # Teams relegated from the bottom of each league.
@@ -135,7 +136,48 @@ def _league_standings(code, ctx):
     }
 
 
-_SOURCES = {"league": _league_standings}
+def _cup_standings(code, ctx):
+    """Standings for a snapshot-backed cup — a completed competition.
+
+    No as_of caveat: the season is over, so the table is final rather than a
+    point-in-time reading of one still being played.
+    """
+    snapshot = ctx["snapshot"]
+    table = [
+        {
+            "position": row["rank"],
+            "team": row["team"],
+            "logo": row.get("logo"),
+            "played": row["played"],
+            "won": row["won"],
+            "drawn": row["drawn"],
+            "lost": row["lost"],
+            "goals_for": row["goals_for"],
+            "goals_against": row["goals_against"],
+            "goal_difference": row["goal_difference"],
+            "points": row["points"],
+            "form": row.get("form", []),
+        }
+        for row in sorted(snapshot["table"], key=lambda r: r["rank"])
+    ]
+
+    played = sum(row["played"] for row in table) // 2
+
+    return {
+        "competition": code,
+        "league": snapshot["name"],
+        "kind": "cup",
+        "season": snapshot["season"],
+        "stage": "League phase",
+        "as_of": None,
+        "matches_played": played,
+        "total_matches": played,
+        "complete": True,
+        "table": table,
+    }
+
+
+_SOURCES = {"league": _league_standings, "cup": _cup_standings}
 
 
 def get_standings_source(code):

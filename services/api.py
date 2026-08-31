@@ -60,6 +60,8 @@ app.add_middleware(
 from services.league_manager import LeagueManager
 from services.standings import COMPETITIONS, get_standings_source
 from services.simulator import title_race
+from services.bracket import bracket
+from services.ucl import load_ucl
 from models.preview import generate_match_preview
 
 # ---------------- DATA LOAD ----------------
@@ -111,6 +113,13 @@ for code, filename in LEAGUE_FILES.items():
     except Exception as e:
         failed_leagues.append(code)
         print(f"    [ERROR] Failed to load {code}: {e}")
+
+# Champions League: a committed snapshot, zero API calls
+if load_ucl(league_manager):
+    loaded_leagues.append("UCL")
+    print("    [OK] UCL loaded from data/ucl_2024.json (snapshot, 0 API calls)")
+else:
+    failed_leagues.append("UCL")
 
 # Startup summary
 print("\n--- League Load Summary ---")
@@ -377,11 +386,32 @@ def get_competitions():
 @app.get("/title_race")
 def get_title_race(league: str = "PL"):
     """Monte Carlo projection of the remaining season."""
+    meta = COMPETITIONS.get(league)
+    if meta and meta["kind"] == "cup":
+        raise HTTPException(
+            status_code=400,
+            detail=f"'{league}' is a knockout competition - use /bracket instead",
+        )
+
     ctx = league_manager.get_league(league)
     if not ctx:
         raise HTTPException(status_code=404, detail=f"Competition '{league}' has no data loaded")
 
     return title_race(ctx, league)
+
+
+@app.get("/bracket")
+def get_bracket(competition: str = "UCL"):
+    """Knockout projection for a cup competition."""
+    meta = COMPETITIONS.get(competition)
+    if not meta or meta["kind"] != "cup":
+        raise HTTPException(status_code=404, detail=f"'{competition}' is not a knockout competition")
+
+    ctx = league_manager.get_league(competition)
+    if not ctx:
+        raise HTTPException(status_code=404, detail=f"Competition '{competition}' has no data loaded")
+
+    return bracket(ctx, competition)
 
 
 @app.get("/power_table")

@@ -84,6 +84,15 @@ class LeagueManager:
             print(f"[!] League {league_code}: no usable data.")
             return
 
+        self.build_from_frames(league_code, seasons)
+
+    def build_from_frames(self, league_code, seasons, extra=None):
+        """Build a competition's model from already-parsed match frames.
+
+        Shared by the CSV leagues and by snapshot-backed competitions such as
+        the Champions League, so both get the same Elo, form, power and goal
+        model rather than a parallel implementation.
+        """
         current = seasons[-1]
         history = pd.concat(seasons, ignore_index=True).sort_values("date").reset_index(drop=True)
 
@@ -157,6 +166,7 @@ class LeagueManager:
             "seasons": len(seasons),
             "standings": build_standings(current),
             "goal_model": goal_model,
+            **(extra or {}),
         }
         print(
             f"[OK] League {league_code} loaded. {len(power_lookup)} teams, "
