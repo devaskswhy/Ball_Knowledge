@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { Twitter, Instagram, Youtube } from "lucide-react"
+import { COMPETITIONS } from "@/app/lib/competitions"
 
 export function Footer() {
   return (
@@ -37,20 +38,23 @@ export function Footer() {
           <div>
             <h3 className="mb-4 font-semibold">Competitions</h3>
             <ul className="space-y-3 text-sm">
-              <li><Link href="#" className="text-muted-foreground hover:text-foreground">Premier League</Link></li>
-              <li><Link href="#" className="text-muted-foreground hover:text-foreground">La Liga</Link></li>
-              <li><Link href="#" className="text-muted-foreground hover:text-foreground">Champions League</Link></li>
-              <li><Link href="#" className="text-muted-foreground hover:text-foreground">Serie A</Link></li>
+              {Object.values(COMPETITIONS).map((c) => (
+                <li key={c.code}>
+                  <Link href={`/${c.code}`} className="text-muted-foreground hover:text-foreground">
+                    {c.name}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 
           <div>
-            <h3 className="mb-4 font-semibold">Analytics</h3>
+            <h3 className="mb-4 font-semibold">The Model</h3>
             <ul className="space-y-3 text-sm">
-              <li><Link href="#" className="text-muted-foreground hover:text-foreground">Player Stats</Link></li>
-              <li><Link href="#" className="text-muted-foreground hover:text-foreground">Team Comparison</Link></li>
-              <li><Link href="#" className="text-muted-foreground hover:text-foreground">xG Analysis</Link></li>
-              <li><Link href="#" className="text-muted-foreground hover:text-foreground">Heat Maps</Link></li>
+              <li><span className="text-muted-foreground">Elo ratings, season-regressed</span></li>
+              <li><span className="text-muted-foreground">Poisson goal model</span></li>
+              <li><span className="text-muted-foreground">Monte Carlo title races (10,000 sims)</span></li>
+              <li><span className="text-muted-foreground">Claude-narrated previews</span></li>
             </ul>
           </div>
 
