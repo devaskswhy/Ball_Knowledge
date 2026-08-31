@@ -101,15 +101,37 @@ function Home() {
   const generatePreview = async () => {
     if (!result || result.error) return;
     setLoadingPreview(true);
+    setPreview("");
     try {
-      const res = await axios.get(`${apiUrl()}/preview`, {
-        params: {
-          home,
-          away,
-          league
-        }
+      const response = await fetch(`${apiUrl()}/ai/preview`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ home, away, league }),
       });
-      setPreview(res.data.preview);
+      if (!response.ok || !response.body) {
+        throw new Error(`AI preview failed (${response.status})`);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        const lines = buffer.split("\n\n");
+        buffer = lines.pop() || "";
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const payload = line.slice(6);
+          if (payload === "[DONE]") continue;
+          const parsed = JSON.parse(payload);
+          if (parsed.text) setPreview((prev) => prev + parsed.text);
+          if (parsed.error) console.error("AI preview error:", parsed.error);
+        }
+      }
     } catch (error) {
       console.error("Preview error:", error);
     } finally {
@@ -283,10 +305,10 @@ function Home() {
                         <p className="text-xs text-muted-foreground">Away Win</p>
                       </div>
                     </div>
-                    <Button onClick={generatePreview} variant="outline" className="w-full mt-4 border-primary/30 hover:bg-primary/20 hover:text-primary transition-colors">
-                      Generate AI Preview
+                    <Button onClick={generatePreview} disabled={loadingPreview} variant="outline" className="w-full mt-4 border-primary/30 hover:bg-primary/20 hover:text-primary transition-colors">
+                      {loadingPreview && !preview ? "Thinking..." : "Generate AI Preview"}
                     </Button>
-                    {preview && <p className="mt-4 text-sm">{preview}</p>}
+                    {preview && <p className="mt-4 text-sm whitespace-pre-wrap">{preview}</p>}
                   </CardContent>
                 </Card>
               )}

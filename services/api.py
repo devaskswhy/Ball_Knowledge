@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException, Depends, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from contextlib import asynccontextmanager
 import pandas as pd
@@ -62,7 +63,7 @@ from services.standings import COMPETITIONS, get_standings_source
 from services.simulator import title_race
 from services.bracket import bracket
 from services.ucl import load_ucl
-from models.preview import generate_match_preview
+from services import ai as ai_service
 
 # ---------------- DATA LOAD ----------------
 league_manager = LeagueManager()
@@ -126,6 +127,8 @@ print("\n--- League Load Summary ---")
 print(f"Successfully loaded: {', '.join(loaded_leagues) if loaded_leagues else 'None'}")
 print(f"Failed to load: {', '.join(failed_leagues) if failed_leagues else 'None'}")
 print("--- End Summary ---\n")
+
+ai_service.configure(league_manager)
 
 
 # ---------------- TEAM ID MAP (API-Football) ----------------
@@ -337,26 +340,78 @@ def predict(q: MatchQuery, db = Depends(get_db)):
         **goals,
     }
 
-@app.get("/preview")
-def preview(home: str, away: str, league: str = "PL"):
-    ctx = league_manager.get_league(league)
-    if not ctx:
-        raise HTTPException(status_code=404, detail="League not found")
-        
-    predictor = ctx["predictor"]
-    power_table = ctx["power_table"]
-    elo_df = ctx["elo_df"]
-    final_stats = ctx["final_stats"]
-    
-    # We need a merged dataframe for generate_match_preview
-    # In initial code it was: final_stats.merge(elo_df, on="team")
-    # In LeagueManager we have them.
-    merged = final_stats.merge(elo_df, on="team")
+class PreviewQuery(BaseModel):
+    home: str
+    away: str
+    league: str = "PL"
 
-    text = generate_match_preview(
-        home, away, predictor, power_table, merged
-    )
-    return {"preview": text}
+class TitleRaceAskQuery(BaseModel):
+    league: str = "PL"
+
+class AskQuery(BaseModel):
+    question: str
+
+
+@app.post("/ai/preview")
+def ai_preview(q: PreviewQuery):
+    """Streamed, Claude-narrated preview of an already-computed prediction.
+
+    The model never sees raw team data — only the prediction and expected
+    goals our own models already produced — and is instructed never to state
+    a number that isn't in that payload.
+    """
+    ctx = league_manager.get_league(q.league)
+    if not ctx:
+        raise HTTPException(status_code=404, detail=f"League '{q.league}' not loaded or data missing.")
+
+    power_lookup = ctx["power_lookup"]
+    if q.home not in power_lookup or q.away not in power_lookup:
+        raise HTTPException(status_code=400, detail=f"Unknown team name in {q.league}: '{q.home}' or '{q.away}'")
+
+    res = ctx["predictor"].predict_match(q.home, q.away)
+    goals = ctx["goal_model"].match_report(q.home, q.away)
+    prediction = {
+        "home_win": round(res["home_win"] * 100, 1),
+        "draw": round(res["draw"] * 100, 1),
+        "away_win": round(res["away_win"] * 100, 1),
+    }
+
+    generator = ai_service.preview_stream(q.home, q.away, q.league, prediction, goals)
+    return StreamingResponse(generator, media_type="text/event-stream")
+
+
+@app.post("/ai/title_race")
+def ai_title_race(q: TitleRaceAskQuery):
+    """Title-race numbers plus a short Claude narration of the same numbers."""
+    meta = COMPETITIONS.get(q.league)
+    if meta and meta["kind"] == "cup":
+        raise HTTPException(status_code=400, detail=f"'{q.league}' is a knockout competition - use /bracket instead")
+
+    ctx = league_manager.get_league(q.league)
+    if not ctx:
+        raise HTTPException(status_code=404, detail=f"Competition '{q.league}' has no data loaded")
+
+    race = title_race(ctx, q.league)
+    try:
+        narration = ai_service.narrate_title_race(q.league, race)
+    except RuntimeError as e:
+        raise HTTPException(status_code=429, detail=str(e))
+    except Exception as e:
+        narration = {"summary": None, "error": str(e)}
+
+    return {"data": race, "ai": narration}
+
+
+@app.post("/ai/ask")
+async def ai_ask(q: AskQuery):
+    """Free-form football Q&A. Claude calls read-only tools for every number
+    it uses; nothing here lets it compute or invent one.
+    """
+    try:
+        result = await asyncio.to_thread(ai_service.ask, q.question)
+    except RuntimeError as e:
+        raise HTTPException(status_code=429, detail=str(e))
+    return result
 
 @app.get("/standings")
 def get_standings(league: str = "PL"):
@@ -466,6 +521,7 @@ async def health():
         "timestamp": time.time(),
         "cache": cache.stats(),
         "api_budget": request_budget(),
+        "ai_budget": ai_service.ai_budget(),
         "leagues_loaded": loaded_leagues,
         "env": {
             "has_api_sports_key": bool(os.getenv("API_SPORTS_KEY") or os.getenv("API_FOOTBALL_KEY")),
