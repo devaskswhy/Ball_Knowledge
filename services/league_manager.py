@@ -17,6 +17,16 @@ REQUIRED = ["date", "home", "away", "home_goals", "away_goals"]
 # How far ratings fall back toward the baseline between seasons.
 SEASON_REGRESSION = 1 / 3
 
+# Clubs promoted into a league start below the baseline. A promoted side is
+# usually among the weakest in the division, not an average member of it.
+PROMOTION_ELO_PENALTY = 60
+
+# Rolling form is shrunk toward the league average as if every club had this
+# many prior matches at par. Without it, a promoted club that wins its opener
+# 2-0 shows a perfect defensive record from a single game and outranks clubs
+# with a season of evidence behind them.
+FORM_PRIOR_MATCHES = 8
+
 
 def read_matches(csv_path):
     """Load one season CSV into date/home/away/home_goals/away_goals."""
@@ -82,6 +92,9 @@ class LeagueManager:
         for i, season_df in enumerate(seasons):
             if i:
                 elo.regress_to_mean(SEASON_REGRESSION)
+                season_teams = set(season_df["home"]).union(season_df["away"])
+                for team in season_teams - set(elo.team_elos):
+                    elo.team_elos[team] = elo.base_elo - PROMOTION_ELO_PENALTY
             elo.compute_season(season_df)
 
         elo_df = pd.DataFrame(
@@ -151,6 +164,11 @@ class LeagueManager:
         )
 
     def _compute_stats(self, df):
+        """Rolling form per team, shrunk toward the league average.
+
+        Returns one row per team with pts_last5, gf_last10 and ga_last10, plus
+        the number of matches those figures rest on.
+        """
         home_df = df[["date", "home", "home_goals", "away_goals"]].rename(
             columns={"home": "team", "home_goals": "goals_for", "away_goals": "goals_against"}
         )
@@ -170,12 +188,31 @@ class LeagueManager:
         team_matches["gf_last10"] = g["goals_for"].rolling(10, min_periods=1).mean().reset_index(level=0, drop=True)
         team_matches["ga_last10"] = g["goals_against"].rolling(10, min_periods=1).mean().reset_index(level=0, drop=True)
 
-        return (
+        stats = (
             team_matches.sort_values("date")
             .groupby("team")
             .tail(1)[["team", "pts_last5", "gf_last10", "ga_last10"]]
             .reset_index(drop=True)
         )
+        stats = stats.merge(
+            team_matches.groupby("team").size().rename("matches").reset_index(), on="team", how="left"
+        )
+
+        # Shrink toward the league average, weighted by how much evidence each
+        # club actually has. A club with 30 matches keeps ~79% of its own
+        # figure; one with a single match keeps ~11%.
+        league = {
+            "pts_last5": float(team_matches["points"].mean()),
+            "gf_last10": float(team_matches["goals_for"].mean()),
+            "ga_last10": float(team_matches["goals_against"].mean()),
+        }
+        weight = stats["matches"].clip(upper=10)
+        for column, league_mean in league.items():
+            stats[column] = (
+                weight * stats[column] + FORM_PRIOR_MATCHES * league_mean
+            ) / (weight + FORM_PRIOR_MATCHES)
+
+        return stats
 
     def get_league(self, code):
         return self.leagues.get(code)
