@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { apiUrl } from "@/app/lib/api";
 import { Loader2, X, Trophy, Activity, Target, AlertTriangle } from "lucide-react";
 import Image from "next/image";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/app/components/ui/dialog";
@@ -32,7 +33,7 @@ export default function PlayerStatsModal({
         if (!stats) setLoading(true);
 
         try {
-            const res = await axios.get("http://localhost:8000/player_stats", {
+            const res = await axios.get(`${apiUrl()}/player_stats`, {
                 params: { player_id: playerId, season, league: leagueId }
             });
 

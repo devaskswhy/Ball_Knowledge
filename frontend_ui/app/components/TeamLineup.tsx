@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { apiUrl } from "@/app/lib/api";
 import Image from "next/image";
 import { Users, Loader2 } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
@@ -40,7 +41,7 @@ export default function TeamLineup({ teamName }: TeamLineupProps) {
         setLoading(true);
         setError("");
         try {
-            const res = await axios.get(`http://localhost:8000/squad`, { params: { team: teamName } });
+            const res = await axios.get(`${apiUrl()}/squad`, { params: { team: teamName } });
             const squadData: Player[] = res.data.squad;
             const lineupIds: number[] = res.data.lineup_ids || [];
 

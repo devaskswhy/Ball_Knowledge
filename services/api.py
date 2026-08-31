@@ -5,14 +5,22 @@ from contextlib import asynccontextmanager
 import pandas as pd
 import json
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 import asyncio
 import time
 import os
-from services.external_data import get_injuries, role_counts, get_squad, search_team_id, get_featured_fixtures, get_top_players, get_team_colors, get_player_stats
-from services.wc_data import WC_2026_TEAMS, FIFA_RANKINGS
+from services.external_data import (
+    get_injuries,
+    role_counts,
+    get_squad,
+    search_team_id,
+    get_featured_fixtures,
+    get_top_players,
+    get_player_stats,
+    request_budget,
+)
 from services.cache import cache
-from services.database import get_db, Base, engine
+from services.database import get_db, init_db
 from services.models import Match, Prediction, Team, Player
 from services.scheduler import setup_scheduler, get_scheduler_status
 
@@ -22,6 +30,8 @@ from services.scheduler import setup_scheduler, get_scheduler_status
 async def lifespan(app: FastAPI):
     # Startup
     print("\n--- Starting BallKnowledge API ---")
+    tables = init_db()
+    print("--- Database ready: " + ", ".join(tables) + " ---")
     scheduler = setup_scheduler()
     scheduler.start()
     print("--- Scheduler started ---")
@@ -48,6 +58,8 @@ app.add_middleware(
 
 # ---------------- IMPORT MODELS ----------------
 from services.league_manager import LeagueManager
+from services.standings import COMPETITIONS, get_standings_source
+from services.simulator import title_race
 from models.preview import generate_match_preview
 
 # ---------------- DATA LOAD ----------------
@@ -62,8 +74,8 @@ LEAGUE_FILES = {
     "SA": "I1.csv",
     "L1": "F1.csv",
     "BL": "D1.csv",
-    "WC": "international_matches1.csv", 
 }
+assert set(LEAGUE_FILES) <= set(COMPETITIONS), "CSV map and competition registry disagree"
 
 print("Initializing Leagues...")
 loaded_leagues = []
@@ -153,14 +165,6 @@ TEAM_ID_MAP = {
     "Darmstadt": 779,
     "Hamburg": 180, "HSV": 180,
     "St Pauli": 186,
-
-    # National Teams (World Cup)
-    "Argentina": 26,
-    "France": 2,
-    "Brazil": 6,
-    "England": 10,
-    "Germany": 25,
-    "Spain": 9    
 }
 
 # ---------------- LOAD DYNAMIC ID MAP ----------------
@@ -194,45 +198,16 @@ class MatchQuery(BaseModel):
 # ---------------- ROUTES ----------------
 @app.get("/teams")
 def get_teams(league: str = "PL"):
-    # Return list of teams available in our internal power_lookup for a given league
+    """List the teams we hold power scores for in a given league."""
     ctx = league_manager.get_league(league)
     if not ctx:
-        return {"teams": []} # Or raise HTTPException
-    
-    team_names = sorted(list(ctx["power_lookup"].keys()))
+        return {"teams": []}
 
-    if league == "WC":
-        # Filter for WC 2026 teams only
-        team_names = [t for t in team_names if t in WC_2026_TEAMS]
-        # Also add any confirmed teams that might be missing from power_lookup but are in our whitelist
-        # (This handles the case where LeagueManager only loaded confirmed historical power data)
-        for t in WC_2026_TEAMS:
-            if t not in team_names and t in TEAM_ID_MAP:
-                 team_names.append(t)
-        team_names = sorted(list(set(team_names))) # Dedupe and sort
-    
-    # Map to objects with IDs for Badges
-    
-    # Map to objects with IDs for Badges
-    teams_data = []
-    
-    # Pre-fetch rankings if WC
-    for name in team_names:
-        tid = TEAM_ID_MAP.get(name)
-        t_obj = {
-            "name": name,
-            "id": tid
-        }
-        
-        if league == "WC":
-            t_obj["rank"] = FIFA_RANKINGS.get(name, 999)
-            
-        teams_data.append(t_obj)
-        
-    # Sort by rank if World Cup
-    if league == "WC":
-        teams_data.sort(key=lambda x: x.get("rank", 999))
-        
+    team_names = sorted(ctx["power_lookup"].keys())
+    teams_data = [
+        {"name": name, "id": TEAM_ID_MAP.get(name)}
+        for name in team_names
+    ]
     return {"teams": teams_data}
 
 @app.get("/squad")
@@ -299,6 +274,13 @@ def predict(q: MatchQuery, db = Depends(get_db)):
     res = predictor.predict_match(
         q.home, q.away, h_inj, a_inj, q.home_rest_days, q.away_rest_days
     )
+
+    goals = ctx["goal_model"].match_report(
+        q.home,
+        q.away,
+        home_power_loss=res.get("home_penalty", 0) + max(res.get("home_fatigue", 0), 0),
+        away_power_loss=res.get("away_penalty", 0) + max(res.get("away_fatigue", 0), 0),
+    )
     
     # Store prediction in database
     prediction = Prediction(
@@ -325,7 +307,8 @@ def predict(q: MatchQuery, db = Depends(get_db)):
         "away_penalty": round(res.get("away_penalty", 0), 1),
         "home_fatigue": round(res.get("home_fatigue", 0), 1),
         "away_fatigue": round(res.get("away_fatigue", 0), 1),
-        "prediction_id": prediction.id
+        "prediction_id": prediction.id,
+        **goals,
     }
 
 @app.get("/preview")
@@ -348,6 +331,41 @@ def preview(home: str, away: str, league: str = "PL"):
         home, away, predictor, power_table, merged
     )
     return {"preview": text}
+
+@app.get("/standings")
+def get_standings(league: str = "PL"):
+    """Current league table, computed from played results."""
+    source = get_standings_source(league)
+    if not source:
+        raise HTTPException(status_code=404, detail=f"Unknown competition '{league}'")
+
+    ctx = league_manager.get_league(league)
+    if not ctx:
+        raise HTTPException(status_code=404, detail=f"Competition '{league}' has no data loaded")
+
+    return source(ctx)
+
+
+@app.get("/competitions")
+def get_competitions():
+    """Every competition the API can serve."""
+    return {
+        "competitions": [
+            {"code": code, **meta, "loaded": code in loaded_leagues}
+            for code, meta in COMPETITIONS.items()
+        ]
+    }
+
+
+@app.get("/title_race")
+def get_title_race(league: str = "PL"):
+    """Monte Carlo projection of the remaining season."""
+    ctx = league_manager.get_league(league)
+    if not ctx:
+        raise HTTPException(status_code=404, detail=f"Competition '{league}' has no data loaded")
+
+    return title_race(ctx, league)
+
 
 @app.get("/power_table")
 def get_power_table(league: str = "PL"):
@@ -380,63 +398,6 @@ async def get_player_stats_endpoint(player_id: int, season: int = 2024, league: 
         return {"player": {}, "statistics": {}}
     return stats
 
-# ---------------- WC GROUPS ----------------
-@app.get("/wc_groups")
-def get_wc_expected_groups():
-    """Generate Expected World Cup Groups based on FIFA Rankings"""
-    # 1. Gather all WC 2026 teams
-    teams = []
-    
-    # Use IDs from map
-    for name in WC_2026_TEAMS:
-        if name in TEAM_ID_MAP:
-            # Get rank
-            rank = FIFA_RANKINGS.get(name, 100)
-            teams.append({
-                "name": name,
-                "id": TEAM_ID_MAP[name],
-                "rank": rank
-            })
-    
-    # 2. Sort by Rank
-    teams.sort(key=lambda x: x["rank"])
-    
-    # 3. Create Pots (Assuming 48 teams? User implementation shows ~32 for now in example)
-    # We will just distribute them into Groups A-H (8 groups of 4 = 32 teams)
-    # Or however many fit.
-    
-    groups_data = []
-    group_names = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"]
-    
-    # Snake draft or simple alternating? 
-    # Let's do a simple "Seeded" distribution (Pot 1 to Group A-H, Pot 2 to A-H...)
-    
-    num_groups = 8 # Fit 32 teams
-    # If we have more teams, we add more groups
-    if len(teams) > 32:
-        num_groups = 12 # 48 team format (12 groups of 4)
-        
-    # Initialize groups
-    for i in range(num_groups):
-        groups_data.append({
-            "name": f"Group {group_names[i]}",
-            "teams": []
-        })
-        
-    # Distribute
-    # For a realistic draw, we would use Pots.
-    # Pot 1: Top N teams
-    # Pot 2: Next N teams
-    # ...
-    
-    for i, team in enumerate(teams):
-        # Determine group index. 
-        # Simple distribution: 0, 1, 2... 7, 0, 1, 2...
-        group_idx = i % num_groups
-        groups_data[group_idx]["teams"].append(team)
-        
-    return groups_data
-
 # ---------------- CACHE STATS ----------------
 @app.get("/cache/stats")
 def get_cache_stats():
@@ -457,6 +418,8 @@ async def health():
         "status": "ok",
         "timestamp": time.time(),
         "cache": cache.stats(),
+        "api_budget": request_budget(),
+        "leagues_loaded": loaded_leagues,
         "env": {
             "has_api_sports_key": bool(os.getenv("API_SPORTS_KEY") or os.getenv("API_FOOTBALL_KEY")),
             "data_dir_exists": os.path.isdir(DATA_DIR)
@@ -479,7 +442,7 @@ async def live_scores_ws(websocket: WebSocket):
         while True:
             # Send heartbeat ping every 30 seconds
             await asyncio.sleep(30)
-            await websocket.send_json({"type": "ping", "timestamp": datetime.utcnow().isoformat()})
+            await websocket.send_json({"type": "ping", "timestamp": datetime.now(timezone.utc).isoformat()})
             
             # Fetch live scores every 60 seconds (after first ping)
             await asyncio.sleep(30)
@@ -501,7 +464,7 @@ async def live_scores_ws(websocket: WebSocket):
                 await websocket.send_json({
                     "type": "live_scores",
                     "matches": live_matches,
-                    "timestamp": datetime.utcnow().isoformat()
+                    "timestamp": datetime.now(timezone.utc).isoformat()
                 })
                 
             except Exception as e:
@@ -509,7 +472,7 @@ async def live_scores_ws(websocket: WebSocket):
                 await websocket.send_json({
                     "type": "error",
                     "message": "Failed to fetch live scores",
-                    "timestamp": datetime.utcnow().isoformat()
+                    "timestamp": datetime.now(timezone.utc).isoformat()
                 })
                 
     except WebSocketDisconnect:
@@ -520,67 +483,3 @@ async def live_scores_ws(websocket: WebSocket):
             await websocket.close()
         except:
             pass
-
-# ================================================================
-# ============== WORLD CUP 2026 ENDPOINTS ========================
-# ================================================================
-from services.wc_api import (
-    fetch_wc_fixtures,
-    fetch_wc_live,
-    fetch_wc_standings,
-    fetch_wc_fixture_detail,
-    fetch_wc_headtohead,
-    fetch_wc_injuries,
-    fetch_wc_topscorers,
-)
-
-from typing import Optional
-
-
-@app.get("/wc/fixtures")
-async def wc_fixtures(
-    date: Optional[str] = None,
-    round: Optional[str] = None,
-    status: Optional[str] = None,
-):
-    """
-    World Cup 2026 fixtures.
-    Query params: date (YYYY-MM-DD), round (e.g. 'Group Stage - 1'), status (NS/1H/HT/2H/FT/FT_PEN).
-    """
-    return await fetch_wc_fixtures(date=date, round=round, status=status)
-
-
-@app.get("/wc/live")
-async def wc_live():
-    """Currently live World Cup matches only (never cached)."""
-    return await fetch_wc_live()
-
-
-@app.get("/wc/standings")
-async def wc_standings():
-    """World Cup group standings (5-minute cache)."""
-    return await fetch_wc_standings()
-
-
-@app.get("/wc/fixture/{fixture_id}")
-async def wc_fixture_detail(fixture_id: int):
-    """Full detail for one WC match — events, lineups, statistics (60-second cache)."""
-    return await fetch_wc_fixture_detail(fixture_id)
-
-
-@app.get("/wc/headtohead")
-async def wc_headtohead(team1: int, team2: int, last: int = 10):
-    """Head-to-head record between two teams (24-hour cache)."""
-    return await fetch_wc_headtohead(team1=team1, team2=team2, last=last)
-
-
-@app.get("/wc/injuries")
-async def wc_injuries(team_id: Optional[int] = None):
-    """World Cup injuries, optionally filtered by team_id (10-minute cache)."""
-    return await fetch_wc_injuries(team_id=team_id)
-
-
-@app.get("/wc/topscorers")
-async def wc_topscorers():
-    """Top 10 World Cup 2026 scorers (1-hour cache)."""
-    return await fetch_wc_topscorers()

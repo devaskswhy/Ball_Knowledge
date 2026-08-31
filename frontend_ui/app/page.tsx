@@ -9,16 +9,12 @@ import TeamCombobox from "./components/TeamCombobox";
 import LineupBuilder from "./components/LineupBuilder";
 import TeamLineup from "./components/TeamLineup";
 import HomepageHero from "./components/HomepageHero";
-import { Fixture } from "./components/HomepageHero";
 import { Header } from "./components/Header";
 import { Footer } from "./components/Footer";
-import WorldCupGroups from "./components/WorldCupGroups";
-import FifaRatingsTable from "./components/FifaRatingsTable";
-import MatchAnalyticsPanel from "./components/MatchAnalyticsPanel";
-import PlayerAnalytics from "./components/PlayerAnalytics";
 import { Card, CardHeader, CardTitle, CardContent } from "./components/ui/card";
 import { Button } from "./components/ui/button";
 import { WebSocketProvider } from "./contexts/WebSocketContext";
+import { apiUrl } from "./lib/api";
 
 // TODO: Replace gradient with real image from /public/leagues/
 const LEAGUE_BG: Record<string, string> = {
@@ -27,7 +23,6 @@ const LEAGUE_BG: Record<string, string> = {
   SA: "linear-gradient(135deg, #0b1a30 0%, #000000 100%)", // Serie A: dark navy-to-black
   L1: "linear-gradient(135deg, #0a1f44 0%, #004d4d 100%)", // Ligue 1: dark blue-to-deep-teal
   BL: "linear-gradient(135deg, #2c2c2c 0%, #111111 100%)", // Bundesliga: dark grey-to-charcoal
-  WC: "linear-gradient(135deg, #856a00 0%, #2b3b00 100%)", // World Cup: deep gold-to-dark-olive
 };
 
 // League Dynamic Styles
@@ -37,7 +32,6 @@ const LEAGUE_STYLES: Record<string, { heading: string, text: string }> = {
   SA: { heading: "from-[#004d98] via-[#00a1e0] to-[#ffffff]", text: "text-blue-200" }, // Serie A
   L1: { heading: "from-[#001738] via-[#da291c] to-[#ffffff]", text: "text-gray-200" }, // Ligue 1
   BL: { heading: "from-[#d1101a] via-[#fc1d25] to-[#ffffff]", text: "text-red-100" }, // Bundesliga
-  WC: { heading: "from-yellow-300 via-yellow-500 to-yellow-700", text: "text-yellow-100" }, // World Cup
 };
 
 function Home() {
@@ -64,18 +58,12 @@ function Home() {
   const [awayRest, setAwayRest] = useState<number>(7);
 
   const [teams, setTeams] = useState<{ name: string, id: number | null }[]>([]);
-  const [selectedFixture, setSelectedFixture] = useState<Fixture | null>(null);
 
   // Fetch teams when league changes
   useEffect(() => {
     const getTeams = async () => {
       try {
-        let apiUrl = process.env.NEXT_PUBLIC_API_URL;
-        if (!apiUrl) {
-          apiUrl = typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.hostname}:8000` : "http://localhost:8000";
-        }
-        const cleanApiUrl = apiUrl.replace(/\/$/, "");
-        const res = await axios.get(`${cleanApiUrl}/teams`, { params: { league } });
+        const res = await axios.get(`${apiUrl()}/teams`, { params: { league } });
         setTeams(res.data.teams);
         if (res.data.teams.length > 1) {
           setHome(res.data.teams[0].name);
@@ -92,12 +80,7 @@ function Home() {
     setLoading(true);
     setPreview("");
     try {
-      let apiUrl = process.env.NEXT_PUBLIC_API_URL;
-      if (!apiUrl) {
-        apiUrl = typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.hostname}:8000` : "http://localhost:8000";
-      }
-      const cleanApiUrl = apiUrl.replace(/\/$/, "");
-      const response = await axios.post(`${cleanApiUrl}/predict`, {
+      const response = await axios.post(`${apiUrl()}/predict`, {
         home: home.trim(),
         away: away.trim(),
         home_injuries: homeInjuries,
@@ -119,12 +102,7 @@ function Home() {
     if (!result || result.error) return;
     setLoadingPreview(true);
     try {
-      let apiUrl = process.env.NEXT_PUBLIC_API_URL;
-      if (!apiUrl) {
-        apiUrl = typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.hostname}:8000` : "http://localhost:8000";
-      }
-      const cleanApiUrl = apiUrl.replace(/\/$/, "");
-      const res = await axios.get(`${cleanApiUrl}/preview`, {
+      const res = await axios.get(`${apiUrl()}/preview`, {
         params: {
           home,
           away,
@@ -161,7 +139,7 @@ function Home() {
           {/* Top Section - Heading */}
           <div className="text-center">
             <h1 className={`text-5xl md:text-7xl font-black mb-4 pb-2 leading-tight bg-clip-text text-transparent bg-gradient-to-r drop-shadow-lg ${LEAGUE_STYLES[league]?.heading || "from-primary via-accent to-primary"}`}>
-              {league === "WC" ? "World Cup Mode" : "Ball Knowledge"}
+              Ball Knowledge
             </h1>
             <p className={`text-lg font-medium drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)] ${LEAGUE_STYLES[league]?.text || "text-muted-foreground"}`}>
               Let's see if the AI knows BALL
@@ -190,20 +168,13 @@ function Home() {
                 Impact Players
               </Button>
             </div>
-            <HomepageHero showMatches={showMatches} showStats={showStats} onFixtureClick={(f) => setSelectedFixture(f)} />
+            <HomepageHero showMatches={showMatches} showStats={showStats} />
           </div>
         </div>
       </div>
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-8 space-y-8">
-
-        {/* WC Groups - Top for World Cup Mode */}
-        {league === "WC" && (
-          <section id="wc-groups">
-            <WorldCupGroups />
-          </section>
-        )}
 
         {/* Match Predictor */}
         <section id="predictor">
@@ -359,42 +330,20 @@ function Home() {
         )}
 
         <div className="text-center">
-          {league !== "WC" && (
-            <Button
-              onClick={() => setShowLineup(!showLineup)}
-              variant="outline"
-              disabled={!home || !away}
-              className="border-primary/30 hover:bg-primary/20 hover:text-primary transition-colors"
-            >
-              <Users className="mr-2 h-4 w-4" />
-              {showLineup ? "Hide" : "Show"} Team Lineups
-            </Button>
-          )}
+          <Button
+            onClick={() => setShowLineup(!showLineup)}
+            variant="outline"
+            disabled={!home || !away}
+            className="border-primary/30 hover:bg-primary/20 hover:text-primary transition-colors"
+          >
+            <Users className="mr-2 h-4 w-4" />
+            {showLineup ? "Hide" : "Show"} Team Lineups
+          </Button>
         </div>
 
-        {/* Player Analytics Section */}
-        {league !== "WC" && teams.length > 0 && (
-          <section id="analytics">
-            <PlayerAnalytics teams={teams} selectedTeam={home} />
-          </section>
-        )}
-
-        {/* WC Ratings Table (Visible only in WC mode) */}
-        {league === "WC" && (
-          <section id="wc-ratings" className="pt-8 border-t border-white/10">
-            <FifaRatingsTable />
-          </section>
-        )}
       </main>
 
       <Footer />
-
-      {/* Match Analytics Slide-Over Panel */}
-      <MatchAnalyticsPanel
-        fixture={selectedFixture}
-        league={league}
-        onClose={() => setSelectedFixture(null)}
-      />
 
       {/* LineupBuilder Modal */}
       <LineupBuilder

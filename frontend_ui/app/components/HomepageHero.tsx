@@ -6,6 +6,7 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import { Trophy, Star, TrendingUp, Zap, Calendar, ChevronRight } from "lucide-react";
 import { useWebSocket } from "@/app/contexts/WebSocketContext";
+import { apiUrl } from "@/app/lib/api";
 
 export interface Fixture {
   id: number;
@@ -241,12 +242,7 @@ export default function HomepageHero({ showMatches = true, showStats = true, onF
     setLoading(true);
     setError(null);
     try {
-      let apiUrl = process.env.NEXT_PUBLIC_API_URL;
-      if (!apiUrl) {
-        apiUrl = typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.hostname}:8000` : "http://localhost:8000";
-      }
-      const cleanApiUrl = apiUrl.replace(/\/$/, "");
-      const res = await axios.get(`${cleanApiUrl}/homepage`);
+      const res = await axios.get(`${apiUrl()}/homepage`);
       setFixtures(res.data.featured_fixtures || []);
       setTopPlayers(res.data.top_players || []);
       setPlayerOfWeek(res.data.player_of_week || null);
@@ -263,17 +259,7 @@ export default function HomepageHero({ showMatches = true, showStats = true, onF
     let isMounted = true;
     
     // Resolve URL dynamically to handle cases where frontend is accessed from a different device (e.g. 192.168.x.x)
-    let baseApiUrl = process.env.NEXT_PUBLIC_API_URL;
-    if (!baseApiUrl) {
-      if (typeof window !== 'undefined') {
-        baseApiUrl = `${window.location.protocol}//${window.location.hostname}:8000`;
-      } else {
-        baseApiUrl = "http://localhost:8000";
-      }
-    }
-    
-    const cleanApiUrl = baseApiUrl.replace(/\/$/, "");
-    const defaultWsUrl = cleanApiUrl.replace(/^http/, "ws") + "/ws/live";
+    const defaultWsUrl = apiUrl().replace(/^http/, "ws") + "/ws/live";
     const wsUrl = process.env.NEXT_PUBLIC_WS_URL || defaultWsUrl;
     
     let ws: WebSocket | null = null;

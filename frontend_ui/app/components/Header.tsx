@@ -18,7 +18,6 @@ const LEAGUES = [
     { code: "SA", name: "Serie A" },
     { code: "L1", name: "Ligue 1" },
     { code: "BL", name: "Bundesliga" },
-    { code: "WC", name: "World Cup" },
 ]
 
 export function Header({ league, setLeague }: HeaderProps) {

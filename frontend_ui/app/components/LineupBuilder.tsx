@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { apiUrl } from "@/app/lib/api";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { X, Users, Loader2, ChevronDown, RotateCcw } from "lucide-react";
@@ -100,7 +101,7 @@ export default function LineupBuilder({ team, isOpen, onClose }: LineupBuilderPr
         setLoading(true);
         setError("");
         try {
-            const res = await axios.get(`http://localhost:8000/squad`, { params: { team } });
+            const res = await axios.get(`${apiUrl()}/squad`, { params: { team } });
             const squadData: Player[] = res.data.squad;
             const lineupIds: number[] = res.data.lineup_ids || [];
 

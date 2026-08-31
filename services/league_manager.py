@@ -2,6 +2,8 @@ import pandas as pd
 from pathlib import Path
 from models.elo_engine import EloEngine
 from models.predictor import MatchPredictor
+from models.poisson import GoalModel
+from services.standings import build_standings
 
 class LeagueManager:
     def __init__(self):
@@ -127,15 +129,20 @@ class LeagueManager:
         power_table = tf[["team", "power_score", "elo", "gf_last10", "ga_last10", "pts_last5"]].sort_values("power_score", ascending=False)
         power_lookup = dict(zip(power_table["team"], power_table["power_score"]))
 
-        # 3. Predictor
-        predictor = MatchPredictor(elo, power_lookup)
+        # 3. Goal model, then the predictor that draws its draw rate from it
+        goal_model = GoalModel(df, final_stats)
+        predictor = MatchPredictor(elo, power_lookup, goal_model)
 
         self.leagues[league_code] = {
             "predictor": predictor,
             "power_table": power_table,
             "power_lookup": power_lookup,
             "elo_df": elo_df,
-            "final_stats": final_stats
+            "final_stats": final_stats,
+            "elo_engine": elo,
+            "df": df,
+            "standings": build_standings(df),
+            "goal_model": goal_model,
         }
         print(f"[OK] League {league_code} loaded. {len(power_lookup)} teams.")
 

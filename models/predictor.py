@@ -1,9 +1,16 @@
 import numpy as np
 
+# Used only when a league has no goal model (no scoring data to calibrate on).
+FALLBACK_DRAW = 0.24
+
+
 class MatchPredictor:
-    def __init__(self, elo_engine, power_lookup):
+    def __init__(self, elo_engine, power_lookup, goal_model=None):
         self.elo_engine = elo_engine
         self.power_lookup = power_lookup
+        # Supplies the per-fixture draw probability. Without it every match
+        # would share one hard-coded draw rate, which is what this replaces.
+        self.goal_model = goal_model
 
     def predict_match(self, home, away, home_injuries=None, away_injuries=None, home_rest=7, away_rest=7):
         elo_home = self.elo_engine.get_elo(home)
@@ -58,15 +65,29 @@ class MatchPredictor:
         final_home = 0.55 * prob_home_elo + 0.45 * prob_home_power
         final_away = 1 - final_home
 
-        base_draw = 0.22
-        total = final_home + final_away + base_draw
+        # The Elo and power blend decides WHO wins. How often the fixture is
+        # drawn is a different question, and a constant is the wrong answer to
+        # it: a mismatch draws far less often than two evenly matched, low
+        # scoring sides. Take the draw from the goal model, then split the
+        # remaining mass in the blend's home:away ratio.
+        if self.goal_model is not None:
+            draw = self.goal_model.draw_probability(
+                home,
+                away,
+                home_power_loss=home_penalty + max(home_fatigue, 0.0),
+                away_power_loss=away_penalty + max(away_fatigue, 0.0),
+            )
+        else:
+            draw = FALLBACK_DRAW
+
+        non_draw = 1.0 - draw
 
         return {
             "home": home,
             "away": away,
-            "home_win": final_home / total,
-            "draw": base_draw / total,
-            "away_win": final_away / total,
+            "home_win": final_home * non_draw,
+            "draw": draw,
+            "away_win": final_away * non_draw,
             "elo_diff": elo_diff,
             "power_diff": ps_diff,
             "home_penalty": home_penalty,
