@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/ca
 import { Button } from "../../components/ui/button";
 import { getCompetition } from "../../lib/competitions";
 import { apiUrl } from "../../lib/api";
+import Reveal from "../../components/Reveal";
 
 type ChatTurn = {
   question: string;
@@ -102,7 +103,7 @@ export default function AskPage() {
 
           <div className="space-y-5">
             {turns.map((turn, i) => (
-              <div key={i} className="space-y-2">
+              <Reveal key={i} trigger="mount" y={16} stagger={0.15} className="space-y-2">
                 <div className="flex justify-end">
                   <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-primary text-primary-foreground px-4 py-2 text-sm">
                     {turn.question}
@@ -130,7 +131,7 @@ export default function AskPage() {
                     )}
                   </div>
                 </div>
-              </div>
+              </Reveal>
             ))}
           </div>
 

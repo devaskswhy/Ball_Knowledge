@@ -1,5 +1,9 @@
 "use client";
 
+import { useRef } from "react";
+import { useGSAP } from "@gsap/react";
+import { gsap, prefersReducedMotion } from "../lib/gsap";
+
 type BracketTeam = {
   seed: number;
   team: string;
@@ -46,14 +50,44 @@ function MiniBar({ fraction }: { fraction: number }) {
   const value = pct(fraction);
   return (
     <div className="h-1.5 w-14 rounded-full bg-secondary overflow-hidden mx-auto">
-      <div className="h-full rounded-full bg-primary" style={{ width: `${Math.max(value, value > 0 ? 4 : 0)}%` }} />
+      <div
+        className="bar-fill h-full rounded-full bg-primary"
+        data-target={Math.max(value, value > 0 ? 4 : 0)}
+        style={{ width: 0 }}
+      />
     </div>
   );
 }
 
 export default function BracketBoard({ data }: { data: BracketPayload }) {
+  const container = useRef<HTMLDivElement>(null);
+
+  // Same idea as the title race: a bracket odds table is more convincing
+  // when the bars visibly settle into place than when they're just static.
+  useGSAP(
+    () => {
+      if (!container.current) return;
+      const bars = gsap.utils.toArray<HTMLElement>(container.current.querySelectorAll(".bar-fill"));
+      if (!bars.length) return;
+
+      if (prefersReducedMotion()) {
+        bars.forEach((bar) => (bar.style.width = `${bar.dataset.target}%`));
+        return;
+      }
+
+      gsap.to(bars, {
+        width: (i, el) => `${el.dataset.target}%`,
+        duration: 0.8,
+        ease: "power2.out",
+        stagger: 0.015,
+        scrollTrigger: { trigger: container.current, start: "top 85%", once: true },
+      });
+    },
+    { scope: container, dependencies: [data] }
+  );
+
   return (
-    <div>
+    <div ref={container}>
       <div className="mb-4 space-y-1">
         <p className="text-sm text-muted-foreground">{data.format}</p>
         <p className="text-sm text-muted-foreground">

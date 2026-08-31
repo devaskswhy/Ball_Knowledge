@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Outfit } from "next/font/google";
 import "./globals.css";
+import SmoothScroll from "./components/SmoothScroll";
 
 const outfit = Outfit({
   variable: "--font-outfit",
@@ -24,7 +25,7 @@ export default function RootLayout({
         className={`${outfit.variable} font-sans antialiased`}
         suppressHydrationWarning
       >
-        {children}
+        <SmoothScroll>{children}</SmoothScroll>
       </body>
     </html>
   );

@@ -11,6 +11,7 @@ import TitleRaceList, { TitleRacePayload } from "../components/TitleRaceList";
 import BracketBoard, { BracketPayload } from "../components/BracketBoard";
 import { getCompetition } from "../lib/competitions";
 import { apiUrl } from "../lib/api";
+import Reveal from "../components/Reveal";
 
 const RELEGATION_SPOTS: Record<string, number> = { PL: 3, LL: 3, SA: 3, L1: 2, BL: 2 };
 
@@ -83,7 +84,7 @@ export default function CompetitionHub() {
   if (!meta) return null;
 
   return (
-    <div className="space-y-8">
+    <Reveal trigger="mount" replayKey={loading} stagger={0.12} className="space-y-8">
       {loading && (
         <div className="text-center py-16 text-muted-foreground">Loading {meta.name}...</div>
       )}
@@ -153,6 +154,6 @@ export default function CompetitionHub() {
           </CardContent>
         </Card>
       )}
-    </div>
+    </Reveal>
   );
 }

@@ -1,5 +1,9 @@
 "use client";
 
+import { useRef } from "react";
+import { useGSAP } from "@gsap/react";
+import { gsap, prefersReducedMotion } from "../lib/gsap";
+
 type TitleRaceTeam = {
   team: string;
   current_position: number;
@@ -28,8 +32,9 @@ function Bar({ pct, className }: { pct: number; className: string }) {
   return (
     <div className="h-1.5 w-full rounded-full bg-secondary overflow-hidden">
       <div
-        className={`h-full rounded-full ${className}`}
-        style={{ width: `${Math.max(pct, pct > 0 ? 1.5 : 0)}%` }}
+        className={`bar-fill h-full rounded-full ${className}`}
+        data-target={Math.max(pct, pct > 0 ? 1.5 : 0)}
+        style={{ width: 0 }}
       />
     </div>
   );
@@ -40,9 +45,36 @@ const pct = (fraction: number) => fraction * 100;
 
 export default function TitleRaceList({ data }: { data: TitleRacePayload }) {
   const teams = [...data.teams].sort((a, b) => b.title_probability - a.title_probability);
+  const container = useRef<HTMLDivElement>(null);
+
+  // The bars are the one place a number in this app is worth watching grow
+  // rather than just reading — they're what a Monte Carlo simulation
+  // actually looks like, so the fill animates in instead of appearing static.
+  useGSAP(
+    () => {
+      if (!container.current) return;
+      const bars = gsap.utils.toArray<HTMLElement>(container.current.querySelectorAll(".bar-fill"));
+      if (!bars.length) return;
+
+      if (prefersReducedMotion()) {
+        bars.forEach((bar) => (bar.style.width = `${bar.dataset.target}%`));
+        return;
+      }
+
+      bars.forEach((bar) => {
+        gsap.to(bar, {
+          width: `${bar.dataset.target}%`,
+          duration: 1,
+          ease: "power2.out",
+          scrollTrigger: { trigger: bar, start: "top 90%", once: true },
+        });
+      });
+    },
+    { scope: container, dependencies: [data] }
+  );
 
   return (
-    <div>
+    <div ref={container}>
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
         <p className="text-sm text-muted-foreground">
           Monte Carlo projection · {data.simulations.toLocaleString()} simulations of the

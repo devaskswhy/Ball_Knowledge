@@ -12,6 +12,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/ca
 import { Button } from "../../components/ui/button";
 import { getCompetition } from "../../lib/competitions";
 import { apiUrl } from "../../lib/api";
+import Reveal from "../../components/Reveal";
 
 export default function PredictPage() {
   const params = useParams<{ competition: string }>();
@@ -121,6 +122,7 @@ export default function PredictPage() {
 
   return (
     <div className="space-y-8">
+      <Reveal trigger="scroll">
       <section id="predictor">
         <Card>
           <CardHeader>
@@ -192,33 +194,35 @@ export default function PredictPage() {
 
             {result && !result.error && result.home_win !== undefined && (
               <Card className="bg-secondary">
-                <CardContent className="pt-6 space-y-4">
-                  <div className="grid grid-cols-3 gap-4 text-center">
-                    <div>
-                      <p className="text-2xl font-bold text-primary">{result.home_win}%</p>
-                      <p className="text-xs text-muted-foreground">Home Win</p>
+                <CardContent className="pt-6">
+                  <Reveal trigger="mount" replayKey={result} stagger={0.1} className="space-y-4">
+                    <div className="grid grid-cols-3 gap-4 text-center">
+                      <div>
+                        <p className="text-2xl font-bold text-primary">{result.home_win}%</p>
+                        <p className="text-xs text-muted-foreground">Home Win</p>
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold">{result.draw}%</p>
+                        <p className="text-xs text-muted-foreground">Draw</p>
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold text-accent">{result.away_win}%</p>
+                        <p className="text-xs text-muted-foreground">Away Win</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-2xl font-bold">{result.draw}%</p>
-                      <p className="text-xs text-muted-foreground">Draw</p>
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold text-accent">{result.away_win}%</p>
-                      <p className="text-xs text-muted-foreground">Away Win</p>
-                    </div>
-                  </div>
 
-                  {result.expected_goals && (
-                    <div className="flex items-center justify-center gap-6 text-sm text-muted-foreground border-t border-border pt-4">
-                      <span>xG: <span className="text-foreground font-medium">{result.expected_goals.home}</span> - <span className="text-foreground font-medium">{result.expected_goals.away}</span></span>
-                      <span>Likely score: <span className="text-foreground font-medium">{result.likely_scoreline}</span> ({result.scoreline_probability}%)</span>
-                    </div>
-                  )}
+                    {result.expected_goals && (
+                      <div className="flex items-center justify-center gap-6 text-sm text-muted-foreground border-t border-border pt-4">
+                        <span>xG: <span className="text-foreground font-medium">{result.expected_goals.home}</span> - <span className="text-foreground font-medium">{result.expected_goals.away}</span></span>
+                        <span>Likely score: <span className="text-foreground font-medium">{result.likely_scoreline}</span> ({result.scoreline_probability}%)</span>
+                      </div>
+                    )}
 
-                  <Button onClick={generatePreview} disabled={loadingPreview} variant="outline" className="w-full border-primary/30 hover:bg-primary/20 hover:text-primary transition-colors">
-                    {loadingPreview && !preview ? "Thinking..." : "Generate AI Preview"}
-                  </Button>
-                  {preview && <p className="text-sm whitespace-pre-wrap">{preview}</p>}
+                    <Button onClick={generatePreview} disabled={loadingPreview} variant="outline" className="w-full border-primary/30 hover:bg-primary/20 hover:text-primary transition-colors">
+                      {loadingPreview && !preview ? "Thinking..." : "Generate AI Preview"}
+                    </Button>
+                    {preview && <p className="text-sm whitespace-pre-wrap">{preview}</p>}
+                  </Reveal>
                 </CardContent>
               </Card>
             )}
@@ -231,6 +235,7 @@ export default function PredictPage() {
           </CardContent>
         </Card>
       </section>
+      </Reveal>
 
       {showLineup && home && away && (
         <section id="lineup">

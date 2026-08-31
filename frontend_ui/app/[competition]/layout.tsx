@@ -9,6 +9,7 @@ import { Footer } from "../components/Footer";
 import { WebSocketProvider } from "../contexts/WebSocketContext";
 import { getCompetition } from "../lib/competitions";
 import { territoryFont } from "../lib/fonts";
+import Reveal from "../components/Reveal";
 
 export default function CompetitionLayout({ children }: { children: React.ReactNode }) {
   const params = useParams<{ competition: string }>();
@@ -35,13 +36,15 @@ export default function CompetitionLayout({ children }: { children: React.ReactN
         <div className="relative" style={{ backgroundImage: meta.gradient }}>
           <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/50 to-background" />
           <div className="relative z-10 max-w-7xl mx-auto px-4 pt-10 pb-6">
-            <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              {meta.kind === "cup" ? "Knockout competition" : "League"} · {meta.country}
-            </span>
-            <h1 className={`mt-2 text-4xl md:text-5xl bg-clip-text text-transparent bg-gradient-to-r ${meta.heading} drop-shadow-lg ${territoryFont(meta.code)}`}>
-              {meta.name}
-            </h1>
-            <p className={`mt-2 text-sm ${meta.accentText}`}>{meta.vibe}</p>
+            <Reveal trigger="mount" replayKey={meta.code} stagger={0.08} y={16}>
+              <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground block">
+                {meta.kind === "cup" ? "Knockout competition" : "League"} · {meta.country}
+              </span>
+              <h1 className={`mt-2 text-4xl md:text-5xl bg-clip-text text-transparent bg-gradient-to-r ${meta.heading} drop-shadow-lg ${territoryFont(meta.code)}`}>
+                {meta.name}
+              </h1>
+              <p className={`mt-2 text-sm ${meta.accentText}`}>{meta.vibe}</p>
+            </Reveal>
 
             <nav className="mt-6 flex gap-2">
               {tabs.map((tab) => {

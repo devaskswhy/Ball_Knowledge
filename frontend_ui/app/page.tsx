@@ -11,6 +11,7 @@ import { Button } from "./components/ui/button";
 import { WebSocketProvider } from "./contexts/WebSocketContext";
 import { COMPETITION_ORDER, COMPETITIONS } from "./lib/competitions";
 import { territoryFont } from "./lib/fonts";
+import Reveal from "./components/Reveal";
 
 function Home() {
   const [showMatches, setShowMatches] = useState(true);
@@ -33,14 +34,14 @@ function Home() {
         <div className="absolute inset-0 bg-gradient-to-b from-background/55 via-background/35 to-background" />
 
         <div className="relative z-10 w-full max-w-7xl mx-auto px-4 flex flex-col justify-between h-full">
-          <div className="text-center">
+          <Reveal trigger="mount" stagger={0.12} className="text-center">
             <h1 className="text-5xl md:text-7xl font-black mb-4 pb-2 leading-tight bg-clip-text text-transparent bg-gradient-to-r from-primary via-accent to-primary drop-shadow-lg">
               Ball Knowledge
             </h1>
             <p className="text-lg font-medium text-muted-foreground drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)]">
               Real tables, real form, a model that shows its work — pick a competition to start.
             </p>
-          </div>
+          </Reveal>
 
           <div className="mt-8">
             <div className="flex justify-center md:justify-end gap-2 mb-4">
@@ -63,7 +64,9 @@ function Home() {
                 Impact Players
               </Button>
             </div>
-            <HomepageHero showMatches={showMatches} showStats={showStats} />
+            <Reveal trigger="mount">
+              <HomepageHero showMatches={showMatches} showStats={showStats} />
+            </Reveal>
           </div>
         </div>
       </div>
@@ -79,7 +82,7 @@ function Home() {
           bracket for the Champions League — each computed from real results, not placeholders.
         </p>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <Reveal stagger={0.08} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {COMPETITION_ORDER.map((code) => {
             const meta = COMPETITIONS[code];
             return (
@@ -107,7 +110,7 @@ function Home() {
               </Link>
             );
           })}
-        </div>
+        </Reveal>
       </main>
 
       <Footer />
