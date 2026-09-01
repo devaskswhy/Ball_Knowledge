@@ -18,16 +18,19 @@ export interface Fixture {
   score: { home: number | null; away: number | null };
 }
 
+// football-data.org gives goals/assists for the season in progress. It has no
+// per-player rating or photo, and inventing either would put a number on the
+// page the data never supported - so the cards lead with goals instead.
 interface Player {
   id: number;
   name: string;
-  photo: string;
-  age: number;
-  nationality: string;
-  team: { name: string; logo: string };
+  nationality: string | null;
+  team: string;
+  team_crest: string | null;
+  competition: string;
   goals: number;
   assists: number;
-  rating: string;
+  penalties: number;
 }
 
 // Featured Match Card
@@ -123,14 +126,6 @@ function FeaturedMatchCard({ fixture, onClick }: { fixture: Fixture; onClick?: (
 
 // Player Card
 function PlayerCard({ player, rank }: { player: Player; rank: number }) {
-  const ratingNum = parseFloat(player.rating || "0");
-
-  const getRatingColor = () => {
-    if (ratingNum >= 7.5) return "from-yellow-400 to-amber-500";
-    if (ratingNum >= 7.0) return "from-green-400 to-emerald-500";
-    return "from-blue-400 to-cyan-500";
-  };
-
   return (
     <motion.div
       initial={{ opacity: 0, x: -20 }}
@@ -138,38 +133,36 @@ function PlayerCard({ player, rank }: { player: Player; rank: number }) {
       transition={{ delay: rank * 0.1 }}
       className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a] border border-white/10 hover:border-cyan-500/30 transition-all duration-300 group shadow-lg"
     >
-      <div className="relative">
-        <span className="absolute -top-1 -left-1 w-5 h-5 rounded-full bg-gradient-to-br from-cyan-500 to-purple-500 flex items-center justify-center text-[10px] font-bold text-white z-10">
-          {rank}
-        </span>
-        <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white/10 group-hover:border-cyan-400/50">
-          {player.photo && (
-            <Image src={player.photo} alt={player.name} width={48} height={48} className="object-cover" />
-          )}
-        </div>
+      <span className="w-6 h-6 shrink-0 rounded-full bg-gradient-to-br from-cyan-500 to-purple-500 flex items-center justify-center text-[10px] font-bold text-white">
+        {rank}
+      </span>
+
+      <div className="w-8 h-8 shrink-0 flex items-center justify-center">
+        {player.team_crest && (
+          <Image src={player.team_crest} alt="" width={28} height={28} className="object-contain" />
+        )}
       </div>
 
       <div className="flex-1 min-w-0">
         <p className="text-sm font-bold text-white truncate">{player.name}</p>
-        <div className="flex items-center gap-2 text-xs text-gray-400">
-          {player.team?.logo && (
-            <Image src={player.team.logo} alt="" width={14} height={14} className="object-contain" />
-          )}
-          <span className="truncate">{player.team?.name}</span>
-        </div>
+        <p className="text-xs text-gray-400 truncate">
+          {player.team} · {player.competition}
+        </p>
       </div>
 
-      <div className="text-right">
-        <div className={`text-lg font-black bg-gradient-to-r ${getRatingColor()} bg-clip-text text-transparent`}>
-          {player.rating || "N/A"}
+      <div className="text-right shrink-0">
+        <div className="text-lg font-black bg-gradient-to-r from-yellow-400 to-amber-500 bg-clip-text text-transparent tabular-nums">
+          {player.goals}
         </div>
-        <span className="text-[10px] text-gray-500">RATING</span>
+        <span className="text-[10px] text-gray-500">
+          GOAL{player.goals === 1 ? "" : "S"}
+        </span>
       </div>
     </motion.div>
   );
 }
 
-// Player of the Week Card
+// Leading scorer card
 function PlayerOfWeekCard({ player }: { player: Player }) {
   return (
     <motion.div
@@ -177,59 +170,46 @@ function PlayerOfWeekCard({ player }: { player: Player }) {
       animate={{ opacity: 1, scale: 1 }}
       className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a] border border-amber-500/30 p-6 shadow-xl"
     >
-      {/* Subtle ambient glow behind the card content */}
       <div className="absolute -top-20 -right-20 w-40 h-40 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-      {/* Crown/Trophy */}
       <div className="absolute top-4 right-4">
         <Trophy className="w-8 h-8 text-amber-400" />
       </div>
 
       <div className="flex items-center gap-4">
-        <div className="relative">
-          <div className="w-20 h-20 rounded-full overflow-hidden border-4 border-amber-400/50 shadow-lg shadow-amber-500/20">
-            {player.photo && (
-              <Image src={player.photo} alt={player.name} width={80} height={80} className="object-cover" />
-            )}
-          </div>
-          <div className="absolute -bottom-1 -right-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-400 to-amber-600 text-[10px] font-bold text-black">
-            ⭐ TOP
-          </div>
+        <div className="w-20 h-20 shrink-0 rounded-full border-4 border-amber-400/50 bg-white/5 flex items-center justify-center shadow-lg shadow-amber-500/20">
+          {player.team_crest && (
+            <Image src={player.team_crest} alt={player.team} width={44} height={44} className="object-contain" />
+          )}
         </div>
 
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <p className="text-xs text-amber-400 font-medium uppercase tracking-wider mb-1">Golden Boot</p>
-          <h3 className="text-xl font-black text-white">{player.name}</h3>
-          <div className="flex items-center gap-2 mt-1">
-            {player.team?.logo && (
-              <Image src={player.team.logo} alt="" width={16} height={16} className="object-contain" />
-            )}
-            <span className="text-sm text-gray-400">{player.team?.name}</span>
-          </div>
+          <h3 className="text-xl font-black text-white truncate">{player.name}</h3>
+          <p className="text-sm text-gray-400 truncate mt-1">
+            {player.team}
+            {player.nationality ? ` · ${player.nationality}` : ""}
+          </p>
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 mt-6">
-        <div className="text-center">
-          <div className="text-2xl font-black text-white">{player.goals}</div>
-          <div className="text-[10px] text-gray-500 uppercase">Goals</div>
+      <div className="grid grid-cols-3 gap-4 mt-6 pt-4 border-t border-white/10 text-center">
+        <div>
+          <p className="text-2xl font-black text-white tabular-nums">{player.goals}</p>
+          <p className="text-[10px] text-gray-500 uppercase tracking-wide">Goals</p>
         </div>
-        <div className="text-center">
-          <div className="text-2xl font-black text-white">{player.assists || 0}</div>
-          <div className="text-[10px] text-gray-500 uppercase">Assists</div>
+        <div>
+          <p className="text-2xl font-black text-white tabular-nums">{player.assists}</p>
+          <p className="text-[10px] text-gray-500 uppercase tracking-wide">Assists</p>
         </div>
-        <div className="text-center">
-          <div className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-600">
-            {player.rating || "N/A"}
-          </div>
-          <div className="text-[10px] text-gray-500 uppercase">Rating</div>
+        <div>
+          <p className="text-2xl font-black text-amber-400 tabular-nums">{player.penalties}</p>
+          <p className="text-[10px] text-gray-500 uppercase tracking-wide">Penalties</p>
         </div>
       </div>
     </motion.div>
   );
 }
 
-// Main Homepage Hero Section
 export default function HomepageHero({ showMatches = true, showStats = true, onFixtureClick }: { showMatches?: boolean, showStats?: boolean, onFixtureClick?: (fixture: Fixture) => void }) {
   const [fixtures, setFixtures] = useState<Fixture[]>([]);
   const [topPlayers, setTopPlayers] = useState<Player[]>([]);

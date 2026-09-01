@@ -3,9 +3,9 @@ from pathlib import Path
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
-from dotenv import load_dotenv
+from services.env import load_env
 
-load_dotenv()
+load_env()
 
 # Default to a SQLite file next to the repo root so the database does not
 # depend on the directory uvicorn happens to be launched from.

@@ -8,6 +8,12 @@ const nextConfig: NextConfig = {
         hostname: "media.api-sports.io",
         pathname: "/**",
       },
+      // football-data.org serves team crests and competition emblems.
+      {
+        protocol: "https",
+        hostname: "crests.football-data.org",
+        pathname: "/**",
+      },
     ],
   },
 };

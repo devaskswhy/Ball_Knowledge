@@ -64,6 +64,7 @@ from services.simulator import title_race
 from services.bracket import bracket
 from services.ucl import load_ucl
 from services import ai as ai_service
+from services import football_data
 
 # ---------------- DATA LOAD ----------------
 league_manager = LeagueManager()
@@ -267,26 +268,26 @@ async def get_team_squad(team: str):
     
     return {"team": team, "squad": squad, "lineup_ids": lineup_ids}
 
-# The free API-Football plan only serves seasons 2022-2024, so player stats
-# cannot be current. The season is returned with the payload so the UI can
-# label it honestly instead of implying these are this week's numbers.
-PLAYER_STATS_SEASON = 2024
-
-
 @app.get("/homepage")
 async def get_homepage_data():
-    """Get data for the homepage: featured fixtures, top players"""
-    fixtures = await get_featured_fixtures()
-    top_players = await get_top_players(season=PLAYER_STATS_SEASON)
+    """Today's fixtures and current-season top scorers.
 
-    top_scorer = top_players[0] if top_players else None
+    Backed by football-data.org rather than API-Football: its free tier
+    serves the season actually in progress, so these are this week's
+    numbers rather than an archived season's.
+    """
+    fixtures = await football_data.get_fixtures()
+    scorers = await football_data.get_top_scorers()
+
+    players = scorers["players"]
 
     return {
-        "featured_fixtures": fixtures,
-        "top_players": top_players[:5],
-        "player_of_week": top_scorer,
-        "player_stats_season": f"{PLAYER_STATS_SEASON}/{str(PLAYER_STATS_SEASON + 1)[2:]}",
-        "live_data_available": bool(fixtures or top_players),
+        "featured_fixtures": fixtures[:6],
+        "top_players": players[:5],
+        "player_of_week": players[0] if players else None,
+        "player_stats_season": scorers["season"],
+        "live_data_available": bool(fixtures or players),
+        "source": "football-data.org",
     }
 
 @app.post("/predict")

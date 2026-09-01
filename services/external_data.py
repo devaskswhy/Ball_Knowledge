@@ -2,11 +2,11 @@ import os
 from datetime import date, datetime
 
 import httpx
-from dotenv import load_dotenv
 
 from services.cache import cached
+from services.env import load_env
 
-load_dotenv()
+load_env()
 API_KEY = os.getenv("API_SPORTS_KEY") or os.getenv("API_FOOTBALL_KEY")
 if not API_KEY:
     raise RuntimeError("API_SPORTS_KEY or API_FOOTBALL_KEY is not set. Add it to your .env file.")

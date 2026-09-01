@@ -99,7 +99,10 @@ def cached(ttl_seconds: int, key_prefix: str = ""):
             if cached_result is not None:
                 return cached_result
             result = await func(*args, **kwargs)
-            if result is not None:
+            # Only cache a real answer. An empty list/dict here means the
+            # upstream call failed, and caching that would keep serving the
+            # failure for the whole TTL long after the API recovered.
+            if result:
                 cache.set(cache_key, result, ttl_seconds)
             return result
         return wrapper
