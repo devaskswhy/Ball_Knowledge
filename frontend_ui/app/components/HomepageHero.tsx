@@ -197,7 +197,7 @@ function PlayerOfWeekCard({ player }: { player: Player }) {
         </div>
 
         <div className="flex-1">
-          <p className="text-xs text-amber-400 font-medium uppercase tracking-wider mb-1">Player of the Week</p>
+          <p className="text-xs text-amber-400 font-medium uppercase tracking-wider mb-1">Golden Boot</p>
           <h3 className="text-xl font-black text-white">{player.name}</h3>
           <div className="flex items-center gap-2 mt-1">
             {player.team?.logo && (
@@ -234,6 +234,7 @@ export default function HomepageHero({ showMatches = true, showStats = true, onF
   const [fixtures, setFixtures] = useState<Fixture[]>([]);
   const [topPlayers, setTopPlayers] = useState<Player[]>([]);
   const [playerOfWeek, setPlayerOfWeek] = useState<Player | null>(null);
+  const [statsSeason, setStatsSeason] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { wsConnected, setWsConnected } = useWebSocket();
@@ -246,6 +247,7 @@ export default function HomepageHero({ showMatches = true, showStats = true, onF
       setFixtures(res.data.featured_fixtures || []);
       setTopPlayers(res.data.top_players || []);
       setPlayerOfWeek(res.data.player_of_week || null);
+      setStatsSeason(res.data.player_stats_season || null);
     } catch (err) {
       console.error("Failed to fetch homepage data", err);
       setError("Failed to load homepage data. Please check your connection.");
@@ -429,7 +431,12 @@ export default function HomepageHero({ showMatches = true, showStats = true, onF
             <section>
               <div className="flex items-center gap-2 mb-4">
                 <TrendingUp className="w-5 h-5 text-green-400" />
-                <h2 className="text-lg font-black text-white uppercase tracking-wider">Impact Players</h2>
+                <h2 className="text-lg font-black text-white uppercase tracking-wider">Top Scorers</h2>
+                {statsSeason && (
+                  <span className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                    {statsSeason} season
+                  </span>
+                )}
               </div>
               <div className="space-y-2">
                 {topPlayers.map((p, i) => (
@@ -444,7 +451,12 @@ export default function HomepageHero({ showMatches = true, showStats = true, onF
             <section>
               <div className="flex items-center gap-2 mb-4">
                 <Star className="w-5 h-5 text-amber-400" />
-                <h2 className="text-lg font-black text-white uppercase tracking-wider">Star Player</h2>
+                <h2 className="text-lg font-black text-white uppercase tracking-wider">Leading Scorer</h2>
+                {statsSeason && (
+                  <span className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                    {statsSeason}
+                  </span>
+                )}
               </div>
               <PlayerOfWeekCard player={playerOfWeek} />
             </section>
@@ -455,8 +467,12 @@ export default function HomepageHero({ showMatches = true, showStats = true, onF
       {/* Empty state */}
       {fixtures.length === 0 && topPlayers.length === 0 && (
         <div className="text-center py-12 text-gray-400">
-          <p>No matches or player data available today.</p>
-          <p className="text-sm mt-2">Try again later or check API connection.</p>
+          <p>Live fixtures and player stats are unavailable right now.</p>
+          <p className="text-sm mt-2">
+            These come from API-Football. Tables, title races, the bracket and
+            predictions are computed locally and work regardless — pick a
+            competition below.
+          </p>
         </div>
       )}
     </div>

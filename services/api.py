@@ -267,19 +267,26 @@ async def get_team_squad(team: str):
     
     return {"team": team, "squad": squad, "lineup_ids": lineup_ids}
 
+# The free API-Football plan only serves seasons 2022-2024, so player stats
+# cannot be current. The season is returned with the payload so the UI can
+# label it honestly instead of implying these are this week's numbers.
+PLAYER_STATS_SEASON = 2024
+
+
 @app.get("/homepage")
 async def get_homepage_data():
     """Get data for the homepage: featured fixtures, top players"""
     fixtures = await get_featured_fixtures()
-    top_players = await get_top_players(season=2024)  # Fetch from all major leagues
-    
-    # Get player of the week (top scorer with best stats)
-    player_of_week = top_players[0] if top_players else None
-    
+    top_players = await get_top_players(season=PLAYER_STATS_SEASON)
+
+    top_scorer = top_players[0] if top_players else None
+
     return {
         "featured_fixtures": fixtures,
         "top_players": top_players[:5],
-        "player_of_week": player_of_week
+        "player_of_week": top_scorer,
+        "player_stats_season": f"{PLAYER_STATS_SEASON}/{str(PLAYER_STATS_SEASON + 1)[2:]}",
+        "live_data_available": bool(fixtures or top_players),
     }
 
 @app.post("/predict")
